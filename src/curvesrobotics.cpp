@@ -50,14 +50,6 @@ struct grid_cfg {
 };
 
 //------------------------------------------------------------------------------
-struct square_wave_elem {
-  float Amplitude{};
-  float Yn{};
-  float Xn{};
-  float Theta{};
-};
-
-//------------------------------------------------------------------------------
 struct data {
   int screenWidth = 1280;
   int screenHeight = 768;
@@ -66,11 +58,9 @@ struct data {
   bool StopUpdate{};
   bool ShowGrid{true};
   float Xcalc{};
-  float FofX{}; //!< Fourier calculated series value.
   int n{5};     //!< Fourier series number of terms.
   float dt{};
   float t{};
-  std::vector<square_wave_elem> vSquareWaveElems{};
   std::vector<Vector4> vTrendPoints{};
   grid_cfg GridCfg{};
 
