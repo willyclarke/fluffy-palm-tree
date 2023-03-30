@@ -51,6 +51,10 @@ struct grid_cfg {
 
 //------------------------------------------------------------------------------
 struct data {
+
+  // Declare the function pointer
+  auto(*UpdateDrawFramePointer)(data *) -> void;
+
   int screenWidth = 1280;
   int screenHeight = 768;
   int Key{};
@@ -58,7 +62,7 @@ struct data {
   bool StopUpdate{};
   bool ShowGrid{true};
   float Xcalc{};
-  int n{5};     //!< Fourier series number of terms.
+  int n{5}; //!< Fourier series number of terms.
   float dt{};
   float t{};
   std::vector<Vector4> vTrendPoints{};
@@ -200,6 +204,9 @@ auto InitEng2PixelMatrix(Vector4 const &OrigoScreen,
   return Hes;
 }
 
+auto UpdateDrawFrame(data *pData) -> void;
+auto UpdateDrawFrameAsteroid(data *pData) -> void;
+
 /**
  * Keyboard input handling common to all the drawing routines.
  */
@@ -238,6 +245,10 @@ auto HandleKeyboardInput(data *pData) -> bool {
     } else if (KEY_SPACE == pData->Key) {
       InputChanged = true;
       pData->StopUpdate = !pData->StopUpdate;
+    } else if (KEY_A == pData->Key) {
+      pData->UpdateDrawFramePointer = &UpdateDrawFrameAsteroid;
+    } else if (KEY_F == pData->Key) {
+      pData->UpdateDrawFramePointer = &UpdateDrawFrame;
     }
 
     pData->KeyPrv = pData->Key;
@@ -383,6 +394,28 @@ auto UpdateDrawFrame(data *pData) -> void {
 
   EndDrawing();
 }
+
+/**
+ * Draw an animation of n - terms of a Fourier square wave.
+ */
+auto UpdateDrawFrameAsteroid(data *pData) -> void {
+  BeginDrawing();
+  ClearBackground(ORANGE);
+
+  DrawText(std::string("Use arrow keys. Zoom: " +
+                       std::to_string(pData->vPixelsPerUnit.x))
+               .c_str(),
+           140, 10, 20, BLUE);
+  DrawText(std::string("Num terms: " + std::to_string(pData->n) +
+                       ". Key:" + std::to_string(pData->KeyPrv) +
+                       ". Time:" + std::to_string(pData->Xcalc))
+               .c_str(),
+           140, 40, 20, BLUE);
+
+  bool const InputChanged = HandleKeyboardInput(pData);
+
+  EndDrawing();
+}
 }; // namespace
 
 /**
@@ -420,6 +453,8 @@ auto main() -> int {
   // ---
   Data.GridCfg = GridCfgInPixels(Data.Hep);
 
+  Data.UpdateDrawFramePointer = UpdateDrawFrame;
+
   // ---
   // Main game loop
   // ---
@@ -431,7 +466,7 @@ auto main() -> int {
       Data.t = GetTime();
     Data.Key = GetKeyPressed();
 
-    UpdateDrawFrame(pData);
+    (*Data.UpdateDrawFramePointer)(pData);
   }
 
   // ---
