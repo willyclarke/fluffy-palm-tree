@@ -29,6 +29,26 @@ struct pixel_pos {
   int Y{};
 };
 
+/**
+ * Grid configuration.
+ * Store a vector of pixel_pos which is the screen X and Y pixel positions.
+ * The GridCentre and GridDimensions are used to keep information about size
+ * so that it can be passed around to the various routines that need it.
+ */
+struct grid_cfg {
+  std::vector<pixel_pos> vGridLines{};
+
+  /**
+   */
+  Vector4 GridCentre{};
+
+  /**
+   * x is GridLength
+   * y is GridHeight
+   */
+  Vector4 GridDimensions{8.f, 6.f, 0.f, 0.f};
+};
+
 //------------------------------------------------------------------------------
 struct square_wave_elem {
   float Amplitude{};
@@ -52,7 +72,7 @@ struct data {
   float t{};
   std::vector<square_wave_elem> vSquareWaveElems{};
   std::vector<Vector4> vTrendPoints{};
-  std::vector<pixel_pos> vGridLines{};
+  grid_cfg GridCfg{};
 
   Matrix Hep{}; //!< Homogenous matrix for conversion from engineering space to
                 //!< pixelspace.
@@ -64,15 +84,17 @@ struct data {
 /*
  * Create lines and ticks for a grid in engineering units.
  */
-auto vGridInPixels(Matrix const &Hep, //!< Homogenous matrix from engineering to
-                                      //!< pixel position.
-                   float GridXLowerLeft = -4.f, //!<
-                   float GridYLowerLeft = -3.f, //!<
-                   float GridLength = 8.f,      //!<
-                   float GridHeight = 6.f,      //!<
-                   float TickDistance = 0.1f    //!<
-                   ) -> std::vector<pixel_pos> {
+auto GridCfgInPixels(Matrix const &Hep, //!< Homogenous matrix from engineering
+                                        //!< to pixel position.
+                     float GridLength = 8.f,   //!<
+                     float GridHeight = 6.f,   //!<
+                     float GridXCentre = 0.f,  //!<
+                     float GridYCentre = 0.f,  //!<
+                     float TickDistance = 0.1f //!<
+                     ) -> grid_cfg {
 
+  auto const GridXLowerLeft = GridXCentre - GridLength / 2.f;
+  auto const GridYLowerLeft = GridYCentre - GridHeight / 2.f;
   // ---
   // NOTE: Make and draw a grid.
   // ---
@@ -137,12 +159,17 @@ auto vGridInPixels(Matrix const &Hep, //!< Homogenous matrix from engineering to
     vGridPoint.push_back(grid_point{PosX0, PosY0, PosX1, PosY1});
   }
 
-  std::vector<pixel_pos> Result{};
+  grid_cfg Result{};
+  Result.GridCentre.x = GridXLowerLeft + GridLength / 2.f;
+  Result.GridCentre.y = GridYLowerLeft + GridHeight / 2.f;
+  Result.GridDimensions.x = GridLength;
+  Result.GridDimensions.y = GridHeight;
+
   for (auto Elem : vGridPoint) {
     auto const ToPixel = Hep * es::Point(Elem.toX, Elem.toY, 0.f);
     auto const FromPixel = Hep * es::Point(Elem.fromX, Elem.fromY, 0.f);
-    Result.push_back({int(ToPixel.x), int(ToPixel.y)});
-    Result.push_back({int(FromPixel.x), int(FromPixel.y)});
+    Result.vGridLines.push_back({int(ToPixel.x), int(ToPixel.y)});
+    Result.vGridLines.push_back({int(FromPixel.x), int(FromPixel.y)});
   }
 
   return Result;
@@ -190,6 +217,7 @@ auto HandleKeyboardInput(data *pData) -> bool {
   bool InputChanged{};
 
   constexpr float MinPixelPerUnit = 50.f;
+  auto const PixelPerUnitPrv = pData->vPixelsPerUnit;
 
   if (pData->Key) {
     if (KEY_G == pData->Key) {
@@ -227,16 +255,25 @@ auto HandleKeyboardInput(data *pData) -> bool {
 
   if (InputChanged) {
     pData->Xcalc = 0.0;
-    pData->vGridLines = vGridInPixels(pData->Hep);
+    pData->vTrendPoints.clear();
 
     pData->Hep = InitEng2PixelMatrix(
         pData->vEngOffset, pData->vPixelsPerUnit,
         {pData->screenWidth / 2.f, pData->screenHeight / 2.f, 0.f, 0.f});
+
+    pData->GridCfg =
+        GridCfgInPixels(pData->Hep,
+                        pData->GridCfg.GridDimensions.x * PixelPerUnitPrv.x /
+                            pData->vPixelsPerUnit.x,
+                        pData->GridCfg.GridDimensions.y * PixelPerUnitPrv.y /
+                            pData->vPixelsPerUnit.y);
   }
+
   return InputChanged;
 }
 
 /**
+ * Draw an animation of n - terms of a Fourier square wave.
  */
 auto UpdateDrawFrame(data *pData) -> void {
   BeginDrawing();
@@ -254,10 +291,13 @@ auto UpdateDrawFrame(data *pData) -> void {
 
   bool const InputChanged = HandleKeyboardInput(pData);
 
+  // ---
+  // NOTE: Draw the grid.
+  // ---
   if (pData->ShowGrid) {
-    for (size_t Idx = 0; Idx < pData->vGridLines.size(); Idx += 2) {
-      auto const &Elem0 = pData->vGridLines[Idx];
-      auto const &Elem1 = pData->vGridLines[Idx + 1];
+    for (size_t Idx = 0; Idx < pData->GridCfg.vGridLines.size(); Idx += 2) {
+      auto const &Elem0 = pData->GridCfg.vGridLines[Idx];
+      auto const &Elem1 = pData->GridCfg.vGridLines[Idx + 1];
       DrawLine(Elem0.X, Elem0.Y, Elem1.X, Elem1.Y, Fade(VIOLET, 1.0f));
     }
   }
@@ -298,7 +338,9 @@ auto UpdateDrawFrame(data *pData) -> void {
   auto const Frequency = 2.0;
   auto const Omegat = M_2_PI * Frequency * pData->t;
   auto const Radius = 4.f / M_PI;
-  auto Centre = es::Point(-5.f, 0.f, 0.f);
+  auto Centre = es::Point(pData->GridCfg.GridCentre.x -
+                              pData->GridCfg.GridDimensions.x / 2.f - Radius,
+                          0.f, 0.f);
 
   auto Ft =
       Centre + es::Vector(Radius * cosf(Omegat), Radius * sinf(Omegat), 0.f);
@@ -324,10 +366,15 @@ auto UpdateDrawFrame(data *pData) -> void {
   auto GridStart = es::Point(0.f, 0.f, 0.f);
   pData->Xcalc += pData->dt;
 
-  // Reset time - based on knowing that the default grid settings are from -4 to
-  // +4. FIXME.
-  if (pData->Xcalc > 4.f) {
-    pData->Xcalc = -4.f;
+  // ---
+  // NOTE: Reset X value axis plots
+  // ---
+  auto const GridRight =
+      pData->GridCfg.GridCentre.x + pData->GridCfg.GridDimensions.x / 2.f;
+
+  if (pData->Xcalc > GridRight) {
+    auto const GridLeft = -GridRight;
+    pData->Xcalc = GridLeft;
     pData->vTrendPoints.clear();
   }
 
@@ -378,9 +425,14 @@ auto main() -> int {
       Data.vEngOffset, Data.vPixelsPerUnit,
       {Data.screenWidth / 2.f, Data.screenHeight / 2.f, 0.f, 0.f});
 
-  Data.vGridLines = vGridInPixels(Data.Hep);
+  // ---
+  // NOTE: Construct the grid pattern.
+  // ---
+  Data.GridCfg = GridCfgInPixels(Data.Hep);
 
+  // ---
   // Main game loop
+  // ---
   while (!WindowShouldClose()) // Detect window close button or ESC key
   {
     DrawFPS(10, 10);
