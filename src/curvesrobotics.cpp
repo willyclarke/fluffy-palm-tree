@@ -204,6 +204,49 @@ auto InitEng2PixelMatrix(Vector4 const &OrigoScreen,
   return Hes;
 }
 
+// ---
+// NOTE: Lamda to draw a point.
+// ---
+auto ldaDrawPoint = [](Matrix const &Hep, Vector4 const &P,
+                       Vector4 const &m2Pixel, bool Print = false) -> void {
+  auto CurvePoint = Hep * P;
+  DrawPixel(CurvePoint.x, CurvePoint.y, RED);
+  constexpr float Radius = 0.01f;
+  DrawCircleLines(CurvePoint.x, CurvePoint.y, Radius * m2Pixel.x,
+                  Fade(BLUE, 0.3f));
+  if (Print) {
+    DrawLine(CurvePoint.x, CurvePoint.y, 0, 0, BLUE);
+    DrawText(std::string("CurvePoint x/y: " + std::to_string(CurvePoint.x) +
+                         " / " + std::to_string(CurvePoint.y))
+                 .c_str(),
+             140, 70, 20, BLUE);
+  }
+};
+
+auto ldaDrawCircle = [](Matrix const &Hep, Vector4 const &Centre, float Radius,
+                        Color Col = BLUE) -> void {
+  auto CurvePoint = Hep * Centre;
+  DrawCircleLines(CurvePoint.x, CurvePoint.y, Radius * Hep.m5, Fade(Col, 0.3f));
+};
+
+auto ldaDrawLine = [](Matrix const &Hep, Vector4 const &From, Vector4 const &To,
+                      Color Col = BLUE) -> void {
+  auto F = Hep * From;
+  auto T = Hep * To;
+  DrawLine(F.x, F.y, T.x, T.y, BLUE);
+};
+
+/**
+ */
+auto ldaShowGrid = [](data *pData) -> void {
+  for (size_t Idx = 0; Idx < pData->GridCfg.vGridLines.size(); Idx += 2) {
+    auto const &Elem0 = pData->GridCfg.vGridLines[Idx];
+    auto const &Elem1 = pData->GridCfg.vGridLines[Idx + 1];
+    DrawLine(Elem0.X, Elem0.Y, Elem1.X, Elem1.Y, Fade(VIOLET, 1.0f));
+  }
+};
+}; // namespace
+
 auto UpdateDrawFrame(data *pData) -> void;
 auto UpdateDrawFrameAsteroid(data *pData) -> void;
 
@@ -247,8 +290,10 @@ auto HandleKeyboardInput(data *pData) -> bool {
       pData->StopUpdate = !pData->StopUpdate;
     } else if (KEY_A == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameAsteroid;
+      InputChanged = true;
     } else if (KEY_F == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrame;
+      InputChanged = true;
     }
 
     pData->KeyPrv = pData->Key;
@@ -290,51 +335,14 @@ auto UpdateDrawFrame(data *pData) -> void {
                .c_str(),
            140, 40, 20, BLUE);
 
-  bool const InputChanged = HandleKeyboardInput(pData);
+  HandleKeyboardInput(pData);
 
   // ---
   // NOTE: Draw the grid.
   // ---
   if (pData->ShowGrid) {
-    for (size_t Idx = 0; Idx < pData->GridCfg.vGridLines.size(); Idx += 2) {
-      auto const &Elem0 = pData->GridCfg.vGridLines[Idx];
-      auto const &Elem1 = pData->GridCfg.vGridLines[Idx + 1];
-      DrawLine(Elem0.X, Elem0.Y, Elem1.X, Elem1.Y, Fade(VIOLET, 1.0f));
-    }
+    ldaShowGrid(pData);
   }
-
-  // ---
-  // NOTE: Lamda to draw a point.
-  // ---
-  auto ldaDrawPoint = [](Matrix const &Hep, Vector4 const &P,
-                         Vector4 const &m2Pixel, bool Print = false) -> void {
-    auto CurvePoint = Hep * P;
-    DrawPixel(CurvePoint.x, CurvePoint.y, RED);
-    constexpr float Radius = 0.01f;
-    DrawCircleLines(CurvePoint.x, CurvePoint.y, Radius * m2Pixel.x,
-                    Fade(BLUE, 0.3f));
-    if (Print) {
-      DrawLine(CurvePoint.x, CurvePoint.y, 0, 0, BLUE);
-      DrawText(std::string("CurvePoint x/y: " + std::to_string(CurvePoint.x) +
-                           " / " + std::to_string(CurvePoint.y))
-                   .c_str(),
-               140, 70, 20, BLUE);
-    }
-  };
-
-  auto ldaDrawCircle = [](Matrix const &Hep, Vector4 const &Centre,
-                          float Radius, Color Col = BLUE) -> void {
-    auto CurvePoint = Hep * Centre;
-    DrawCircleLines(CurvePoint.x, CurvePoint.y, Radius * Hep.m5,
-                    Fade(Col, 0.3f));
-  };
-
-  auto ldaDrawLine = [](Matrix const &Hep, Vector4 const &From,
-                        Vector4 const &To, Color Col = BLUE) -> void {
-    auto F = Hep * From;
-    auto T = Hep * To;
-    DrawLine(F.x, F.y, T.x, T.y, BLUE);
-  };
 
   auto const Frequency = 2.0;
   auto const Omegat = M_2_PI * Frequency * pData->t;
@@ -400,7 +408,7 @@ auto UpdateDrawFrame(data *pData) -> void {
  */
 auto UpdateDrawFrameAsteroid(data *pData) -> void {
   BeginDrawing();
-  ClearBackground(ORANGE);
+  ClearBackground(WHITE);
 
   DrawText(std::string("Use arrow keys. Zoom: " +
                        std::to_string(pData->vPixelsPerUnit.x))
@@ -412,11 +420,69 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
                .c_str(),
            140, 40, 20, BLUE);
 
-  bool const InputChanged = HandleKeyboardInput(pData);
+  HandleKeyboardInput(pData);
+
+  // ---
+  // NOTE: Draw the grid.
+  // ---
+  if (pData->ShowGrid) {
+    ldaShowGrid(pData);
+  }
+
+  auto constexpr Radius = 1.f;
+  auto const t = pData->t;
+
+  // ---
+  // NOTE: The formula to compute the Asteroide.
+  // ---
+  auto const x = Radius / 4.f * (3.f * cos(t) + cos(3.f * t));
+  auto const y = Radius / 4.f * (3.f * sin(t) - sin(3.f * t));
+
+  // ---
+  // NOTE: Follow along the fixed circle.
+  // ---
+  auto const FixedCx = Radius * cos(t);
+  auto const FixedCy = Radius * sin(t);
+
+  auto GridStart = es::Point(0.f, 0.f, 0.f);
+
+  auto AnimationSmallCircle =
+      GridStart + es::Vector(3.f / 4.f * FixedCx, 3.f / 4.f * FixedCy, 0.f);
+
+  // Draw the small circle.
+  ldaDrawCircle(pData->Hep, AnimationSmallCircle, Radius / 4.f);
+
+  // Draw the fixed circle.
+  ldaDrawCircle(pData->Hep, GridStart, Radius);
+  ldaDrawCircle(pData->Hep, GridStart, Radius + 0.0125f);
+
+  pData->Xcalc += pData->dt;
+
+  // ---
+  // NOTE: Reset X value axis plots
+  // ---
+  auto const GridRight =
+      pData->GridCfg.GridCentre.x + pData->GridCfg.GridDimensions.x / 2.f;
+
+  if (pData->Xcalc > GridRight) {
+    auto const GridLeft = -GridRight;
+    pData->Xcalc = GridLeft;
+    pData->vTrendPoints.clear();
+  }
+
+  // auto AnimationPoint = GridStart + es::Vector(pData->Xcalc, y, 0.f);
+  auto AnimationPoint = GridStart + es::Vector(x, y, 0.f);
+
+  // Draw the actual trend
+  pData->vTrendPoints.push_back(AnimationPoint);
+  for (auto E : pData->vTrendPoints) {
+    ldaDrawPoint(pData->Hep, E, {pData->Hep.m0, pData->Hep.m5, 0.f, 0.f});
+  }
+
+  ldaDrawLine(pData->Hep, AnimationPoint, AnimationSmallCircle);
 
   EndDrawing();
 }
-}; // namespace
 
 /**
  *
