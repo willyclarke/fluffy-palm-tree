@@ -54,6 +54,7 @@ struct data {
 
   // Declare the function pointer
   auto(*UpdateDrawFramePointer)(data *) -> void;
+  std::vector<std::string> vHelpTextPage{};
 
   int screenWidth = 1280;
   int screenHeight = 768;
@@ -205,7 +206,7 @@ auto InitEng2PixelMatrix(Vector4 const &OrigoScreen,
 }
 
 // ---
-// NOTE: Lamda to draw a point.
+// NOTE: Lamda to draw a point. Actually it draws a small circle.
 // ---
 auto ldaDrawPoint = [](Matrix const &Hep, Vector4 const &P,
                        Vector4 const &m2Pixel, bool Print = false) -> void {
@@ -223,12 +224,18 @@ auto ldaDrawPoint = [](Matrix const &Hep, Vector4 const &P,
   }
 };
 
+/**
+ * Draw a circle with Radius - go figure.
+ */
 auto ldaDrawCircle = [](Matrix const &Hep, Vector4 const &Centre, float Radius,
                         Color Col = BLUE) -> void {
   auto CurvePoint = Hep * Centre;
   DrawCircleLines(CurvePoint.x, CurvePoint.y, Radius * Hep.m5, Fade(Col, 0.3f));
 };
 
+/**
+ * Function to draw a line between two points.
+ */
 auto ldaDrawLine = [](Matrix const &Hep, Vector4 const &From, Vector4 const &To,
                       Color Col = BLUE) -> void {
   auto F = Hep * From;
@@ -237,6 +244,7 @@ auto ldaDrawLine = [](Matrix const &Hep, Vector4 const &From, Vector4 const &To,
 };
 
 /**
+ * Function to show the grid.
  */
 auto ldaShowGrid = [](data *pData) -> void {
   for (size_t Idx = 0; Idx < pData->GridCfg.vGridLines.size(); Idx += 2) {
@@ -245,10 +253,10 @@ auto ldaShowGrid = [](data *pData) -> void {
     DrawLine(Elem0.X, Elem0.Y, Elem1.X, Elem1.Y, Fade(VIOLET, 1.0f));
   }
 };
-}; // namespace
 
 auto UpdateDrawFrame(data *pData) -> void;
 auto UpdateDrawFrameAsteroid(data *pData) -> void;
+auto UpdateDrawFrameHelp(data *pData) -> void;
 
 /**
  * Keyboard input handling common to all the drawing routines.
@@ -293,6 +301,9 @@ auto HandleKeyboardInput(data *pData) -> bool {
       InputChanged = true;
     } else if (KEY_F == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrame;
+      InputChanged = true;
+    } else if (KEY_F1 == pData->Key) {
+      pData->UpdateDrawFramePointer = &UpdateDrawFrameHelp;
       InputChanged = true;
     }
 
@@ -485,6 +496,38 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
 }
 
 /**
+ * Display a page with some help text.
+ */
+auto UpdateDrawFrameHelp(data *pData) -> void {
+  BeginDrawing();
+  ClearBackground(LIGHTGRAY);
+
+  constexpr auto TextOffsetY = 25u;
+  constexpr auto TextPosY = 40u;
+  auto TextIdx = 0u;
+
+  DrawText("Available pages", 40, TextPosY + (TextIdx * TextOffsetY), 20, BLUE);
+
+  auto ldaDisplayHelpText = [&](std::string HelpText) -> unsigned int {
+    ++TextIdx;
+
+    DrawText(HelpText.c_str(), 40, TextPosY + (TextIdx * TextOffsetY), 20,
+             BLUE);
+    return TextIdx;
+  };
+
+  for (auto E : pData->vHelpTextPage) {
+    ldaDisplayHelpText(E);
+  }
+
+  HandleKeyboardInput(pData);
+
+  EndDrawing();
+}
+
+}; // namespace
+
+/**
  *
  */
 auto main() -> int {
@@ -492,12 +535,16 @@ auto main() -> int {
   Data.vTrendPoints.reserve(size_t(Data.screenWidth));
   auto pData = &Data;
 
-  // ---
   // Initialization
   // ---
   InitWindow(Data.screenWidth, Data.screenHeight,
-             "Fourier terms on a square wave");
+             "Fluffy's adventures with Raylib");
 
+  Data.vHelpTextPage.push_back("F1 - This help page");
+  Data.vHelpTextPage.push_back("f -  Fourier square wave");
+  Data.vHelpTextPage.push_back("a -  Asteriode");
+
+  // ---
   SetTargetFPS(60); // Set our game to run at X frames-per-second
 
   // ---
