@@ -54,6 +54,10 @@ Cmake can be installed by both apt and snap on Ubuntu. Snap will install a newer
 sudo snap install cmake --classic
 ```
 
+## Images
+
+[Screenshot of the Asteroid curve](https://github.com/willyclarke/fluffy-palm-tree/images/asteroid.png)
+
 ## Runs on
 
 * OSX 13.2 (22D49) - Apple M2 Max
