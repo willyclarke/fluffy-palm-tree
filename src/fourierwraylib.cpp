@@ -360,7 +360,7 @@ void UpdateDrawFrameFourier(data *pData) {
                .c_str(),
            140, 40, 20, BLUE);
 
-  bool const InputChanged = HandleKeyboardInput(pData);
+  HandleKeyboardInput(pData);
 
   if (pData->ShowGrid) {
     for (size_t Idx = 0; Idx < pData->vGridLines.size(); Idx += 2) {

@@ -14,6 +14,7 @@
 #include "engsupport.hpp"
 #include "raylib.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -67,6 +68,8 @@ struct data {
   float dt{};
   float t{};
   std::vector<Vector4> vTrendPoints{};
+  size_t CurrentTrendPoint{};
+  size_t NumTrendPoints{};
   grid_cfg GridCfg{};
 
   Matrix Hep{}; //!< Homogenous matrix for conversion from engineering space to
@@ -209,12 +212,13 @@ auto InitEng2PixelMatrix(Vector4 const &OrigoScreen,
 // NOTE: Lamda to draw a point. Actually it draws a small circle.
 // ---
 auto ldaDrawPoint = [](Matrix const &Hep, Vector4 const &P,
-                       Vector4 const &m2Pixel, bool Print = false) -> void {
+                       Vector4 const &m2Pixel, bool Print = false,
+                       Color Col = BLUE, float Alpha = 1.f) -> void {
   auto CurvePoint = Hep * P;
-  DrawPixel(CurvePoint.x, CurvePoint.y, RED);
+  DrawPixel(CurvePoint.x, CurvePoint.y, ColorAlpha(RED, Alpha));
   constexpr float Radius = 0.01f;
   DrawCircleLines(CurvePoint.x, CurvePoint.y, Radius * m2Pixel.x,
-                  Fade(BLUE, 0.3f));
+                  ColorAlpha(Col, Alpha));
   if (Print) {
     DrawLine(CurvePoint.x, CurvePoint.y, 0, 0, BLUE);
     DrawText(std::string("CurvePoint x/y: " + std::to_string(CurvePoint.x) +
@@ -254,7 +258,7 @@ auto ldaShowGrid = [](data *pData) -> void {
   }
 };
 
-auto UpdateDrawFrame(data *pData) -> void;
+auto UpdateDrawFrameFourier(data *pData) -> void;
 auto UpdateDrawFrameAsteroid(data *pData) -> void;
 auto UpdateDrawFrameHelp(data *pData) -> void;
 
@@ -262,6 +266,14 @@ auto UpdateDrawFrameHelp(data *pData) -> void;
  * Keyboard input handling common to all the drawing routines.
  */
 auto HandleKeyboardInput(data *pData) -> bool {
+
+  DrawText(
+      std::string(
+          "Use arrow keys. Zoom: " + std::to_string(pData->vPixelsPerUnit.x) +
+          ". CurrentTrendPoint :" + std::to_string(pData->CurrentTrendPoint))
+          .c_str(),
+      140, 10, 20, BLUE);
+
   bool InputChanged{};
 
   constexpr float MinPixelPerUnit = 50.f;
@@ -300,7 +312,7 @@ auto HandleKeyboardInput(data *pData) -> bool {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameAsteroid;
       InputChanged = true;
     } else if (KEY_F == pData->Key) {
-      pData->UpdateDrawFramePointer = &UpdateDrawFrame;
+      pData->UpdateDrawFramePointer = &UpdateDrawFrameFourier;
       InputChanged = true;
     } else if (KEY_F1 == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameHelp;
@@ -312,7 +324,7 @@ auto HandleKeyboardInput(data *pData) -> bool {
 
   if (InputChanged) {
     pData->Xcalc = 0.0;
-    pData->vTrendPoints.clear();
+    pData->CurrentTrendPoint = 0;
 
     pData->Hep = InitEng2PixelMatrix(
         pData->vEngOffset, pData->vPixelsPerUnit,
@@ -332,14 +344,10 @@ auto HandleKeyboardInput(data *pData) -> bool {
 /**
  * Draw an animation of n - terms of a Fourier square wave.
  */
-auto UpdateDrawFrame(data *pData) -> void {
+auto UpdateDrawFrameFourier(data *pData) -> void {
   BeginDrawing();
   ClearBackground(RAYWHITE);
 
-  DrawText(std::string("Use arrow keys. Zoom: " +
-                       std::to_string(pData->vPixelsPerUnit.x))
-               .c_str(),
-           140, 10, 20, BLUE);
   DrawText(std::string("Num terms: " + std::to_string(pData->n) +
                        ". Key:" + std::to_string(pData->KeyPrv) +
                        ". Time:" + std::to_string(pData->Xcalc))
@@ -395,21 +403,25 @@ auto UpdateDrawFrame(data *pData) -> void {
   if (pData->Xcalc > GridRight) {
     auto const GridLeft = -GridRight;
     pData->Xcalc = GridLeft;
-    pData->vTrendPoints.clear();
+    pData->CurrentTrendPoint = 0;
   }
 
   auto AnimationPoint = GridStart + es::Vector(pData->Xcalc, Ftp.y, 0.f);
 
   // Draw the actual trend
-  pData->vTrendPoints.push_back(AnimationPoint);
-  for (auto E : pData->vTrendPoints) {
-    ldaDrawPoint(pData->Hep, E, {pData->Hep.m0, pData->Hep.m5, 0.f, 0.f});
+  pData->vTrendPoints[pData->CurrentTrendPoint] = (AnimationPoint);
+
+  for (size_t Idx = 0; Idx < pData->CurrentTrendPoint; ++Idx) {
+    ldaDrawPoint(pData->Hep, pData->vTrendPoints[Idx],
+                 {pData->Hep.m0, pData->Hep.m5, 0.f, 0.f});
   }
 
   // Draw the inner circle line
   ldaDrawLine(pData->Hep, Ft, Ftp);
   // Draw the connecting line
   ldaDrawLine(pData->Hep, Ftp, AnimationPoint);
+
+  ++pData->CurrentTrendPoint;
 
   EndDrawing();
 }
@@ -421,12 +433,7 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
   BeginDrawing();
   ClearBackground(WHITE);
 
-  DrawText(std::string("Use arrow keys. Zoom: " +
-                       std::to_string(pData->vPixelsPerUnit.x))
-               .c_str(),
-           140, 10, 20, BLUE);
-  DrawText(std::string("Num terms: " + std::to_string(pData->n) +
-                       ". Key:" + std::to_string(pData->KeyPrv) +
+  DrawText(std::string(". Key:" + std::to_string(pData->KeyPrv) +
                        ". Time:" + std::to_string(pData->Xcalc))
                .c_str(),
            140, 40, 20, BLUE);
@@ -472,25 +479,51 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
   // ---
   // NOTE: Reset X value axis plots
   // ---
-  auto const GridRight =
-      pData->GridCfg.GridCentre.x + pData->GridCfg.GridDimensions.x / 2.f;
-
-  if (pData->Xcalc > GridRight) {
-    auto const GridLeft = -GridRight;
-    pData->Xcalc = GridLeft;
-    pData->vTrendPoints.clear();
+  if (pData->Xcalc > 2.f * M_PI) {
+    pData->Xcalc = 0.f;
+    pData->CurrentTrendPoint = 0;
   }
 
-  // auto AnimationPoint = GridStart + es::Vector(pData->Xcalc, y, 0.f);
   auto AnimationPoint = GridStart + es::Vector(x, y, 0.f);
 
   // Draw the actual trend
-  pData->vTrendPoints.push_back(AnimationPoint);
-  for (auto E : pData->vTrendPoints) {
-    ldaDrawPoint(pData->Hep, E, {pData->Hep.m0, pData->Hep.m5, 0.f, 0.f});
+  pData->vTrendPoints[pData->CurrentTrendPoint] = AnimationPoint;
+
+  for (size_t Idx = 0;
+       Idx < std::min(pData->vTrendPoints.size(), pData->NumTrendPoints);
+       ++Idx) {
+
+    // ---
+    // NOTE: Compute the Alpha channel.
+    // Split into two sections.
+    // a: From CurrentTrendPoint+1 to NumTrendPoints.
+    // b: From 0 to CurrentTrendPoint.
+    //    90    180  270  360
+    // ----|----|----|----|----|
+    //       ^
+    //       CurrentTrendPoint
+    //       t0
+    auto Alpha = 0.f;
+    auto t0 = 0.f;
+    if (Idx < pData->CurrentTrendPoint) { //!< segment a
+      t0 = float(pData->NumTrendPoints - pData->CurrentTrendPoint) /
+           float(pData->NumTrendPoints);
+    } else { //!< segment b -> do nothing
+    }
+    auto const t = float(Idx) / float(pData->NumTrendPoints) + t0;
+    Alpha = es::Lerp(es::Vector(0.f, 0.f, 0.f), es::Vector(1.f, 0.f, 0.f), t).x;
+
+    ldaDrawPoint(pData->Hep, pData->vTrendPoints[Idx],
+                 {pData->Hep.m0, pData->Hep.m5, 0.f, 0.f}, false,
+                 Idx < pData->CurrentTrendPoint ? BLUE : RED, Alpha);
   }
 
   ldaDrawLine(pData->Hep, AnimationPoint, AnimationSmallCircle);
+
+  ++pData->CurrentTrendPoint;
+
+  pData->NumTrendPoints =
+      std::max(pData->CurrentTrendPoint, pData->NumTrendPoints);
 
   EndDrawing();
 }
@@ -524,15 +557,26 @@ auto UpdateDrawFrameHelp(data *pData) -> void {
 
   EndDrawing();
 }
-
 }; // namespace
 
 /**
  *
  */
-auto main() -> int {
+auto main(int argc, char const *argv[]) -> int {
+
+  if (argc > 1) {
+    es::TestHomogenousMatrix();
+    es::Test3dCalucations();
+    es::Test3dScreenCalculations();
+    es::TestLerp();
+    return 0;
+  }
+
   data Data{};
-  Data.vTrendPoints.reserve(size_t(Data.screenWidth));
+  Data.vTrendPoints.resize(size_t(Data.screenWidth * Data.screenHeight));
+
+  std::cout << "Size of trend is " << Data.vTrendPoints.size() << std::endl;
+
   auto pData = &Data;
 
   // Initialization
@@ -566,7 +610,7 @@ auto main() -> int {
   // ---
   Data.GridCfg = GridCfgInPixels(Data.Hep);
 
-  Data.UpdateDrawFramePointer = UpdateDrawFrame;
+  Data.UpdateDrawFramePointer = UpdateDrawFrameFourier;
 
   // ---
   // Main game loop

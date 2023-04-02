@@ -21,6 +21,7 @@ namespace es // aka engineering support
 void TestHomogenousMatrix();
 auto Test3dCalucations() -> void;
 auto Test3dScreenCalculations() -> void;
+auto TestLerp() -> void;
 
 /**
  * Identity matrix 4x4
@@ -71,10 +72,16 @@ Vector4 Mul(Matrix const &M, Vector4 const &V);
 float Mul(Vector4 const &V1, Vector4 const &V2);
 
 //------------------------------------------------------------------------------
+Vector4 Mul(Vector4 const &V1, float t);
+
+//------------------------------------------------------------------------------
 Matrix Add(Matrix const &M1, Matrix const &M2);
 
 //------------------------------------------------------------------------------
 bool Eq(Matrix const &M1, Matrix const &M2);
+
+//------------------------------------------------------------------------------
+Vector4 Lerp(Vector4 const &A, Vector4 const &B, float t);
 
 //------------------------------------------------------------------------------
 Matrix Mul(Matrix const &M1, Matrix const &M2);
@@ -87,6 +94,7 @@ bool operator==(Matrix const &M1, Matrix const &M2);
 bool operator!=(Matrix const &M1, Matrix const &M2);
 Vector4 operator*(Matrix const &M, Vector4 const &V);
 float operator*(Vector4 const &V1, Vector4 const &V2);
+Vector4 operator*(Vector4 const &V1, float t);
 Vector4 operator+(Vector4 const &V1, Vector4 const &V2);
 Vector4 operator-(Vector4 const &V1, Vector4 const &V2);
 
