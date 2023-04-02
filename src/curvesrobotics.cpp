@@ -234,7 +234,19 @@ auto ldaDrawPoint = [](Matrix const &Hep, Vector4 const &P,
 auto ldaDrawCircle = [](Matrix const &Hep, Vector4 const &Centre, float Radius,
                         Color Col = BLUE) -> void {
   auto CurvePoint = Hep * Centre;
+  // Use Hep.m5 for scaling/zoom factor.
   DrawCircleLines(CurvePoint.x, CurvePoint.y, Radius * Hep.m5, Fade(Col, 0.3f));
+};
+
+/**
+ * Draw a circle with Radius - filled gradient version.
+ */
+auto ldaDrawCircleG = [](Matrix const &Hep, Vector4 const &Centre, float Radius,
+                         Color Col = BLUE) -> void {
+  auto CurvePoint = Hep * Centre;
+  // Use Hep.m5 for scaling/zoom factor.
+  DrawCircleGradient(CurvePoint.x, CurvePoint.y, Radius * Hep.m5,
+                     Fade(Col, 0.3f), Col);
 };
 
 /**
@@ -467,12 +479,14 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
   auto AnimationSmallCircle =
       GridStart + es::Vector(3.f / 4.f * FixedCx, 3.f / 4.f * FixedCy, 0.f);
 
+  auto constexpr DotSize = 0.025f;
+
   // Draw the small circle.
   ldaDrawCircle(pData->Hep, AnimationSmallCircle, Radius / 4.f);
+  ldaDrawCircleG(pData->Hep, AnimationSmallCircle, DotSize);
 
   // Draw the fixed circle.
   ldaDrawCircle(pData->Hep, GridStart, Radius);
-  ldaDrawCircle(pData->Hep, GridStart, Radius + 0.0125f);
 
   pData->Xcalc += pData->dt;
 
@@ -519,6 +533,7 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
   }
 
   ldaDrawLine(pData->Hep, AnimationPoint, AnimationSmallCircle);
+  ldaDrawCircleG(pData->Hep, AnimationPoint, DotSize, ORANGE);
 
   ++pData->CurrentTrendPoint;
 
