@@ -11,7 +11,9 @@
 #include "engsupport.hpp"
 #include "raylib.h"
 
+#define _USE_MATH_DEFINES
 #include <cmath>
+
 #include <iomanip>
 #include <iostream>
 #include <string>
