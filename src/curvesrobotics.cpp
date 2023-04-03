@@ -68,6 +68,7 @@ struct data {
   int PageNum{};
   int Key{};
   int KeyPrv{};
+  bool TakeScreenshot{};
   bool StopUpdate{};
   bool ShowGrid{true};
   float Xcalc{};
@@ -424,7 +425,7 @@ auto HandleKeyboardInput(data *pData) -> bool {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameHelp;
       InputChanged = true;
     } else if (KEY_F2 == pData->Key) {
-      TakeScreenshot("./Fluffy.png");
+      pData->TakeScreenshot = true;
     }
 
     pData->KeyPrv = pData->Key;
@@ -532,6 +533,12 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
   ++pData->CurrentTrendPoint;
 
   EndDrawing();
+
+  if (pData->TakeScreenshot) {
+    pData->TakeScreenshot = false;
+    auto const FileName = std::string(__FUNCTION__) + ".png";
+    TakeScreenshot(FileName.c_str());
+  }
 }
 
 /**
@@ -644,6 +651,12 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
       std::max(pData->CurrentTrendPoint, pData->NumTrendPoints);
 
   EndDrawing();
+
+  if (pData->TakeScreenshot) {
+    pData->TakeScreenshot = false;
+    auto const FileName = std::string(__FUNCTION__) + ".png";
+    TakeScreenshot(FileName.c_str());
+  }
 }
 
 /**
