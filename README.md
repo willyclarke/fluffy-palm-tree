@@ -57,6 +57,7 @@ sudo snap install cmake --classic
 ## Images
 
 [Screenshot of Asteroide Plot](https://github.com/willyclarke/fluffy-palm-tree/images/UpdateDrawFrameAsteroid.png)
+
 [Screenshot of Fourier Plot](https://github.com/willyclarke/fluffy-palm-tree/images/UpdateDrawFrameFourier.png)
 
 ## Runs on
