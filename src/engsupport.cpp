@@ -113,6 +113,13 @@ float Mul(Vector4 const &V1, Vector4 const &V2) {
 
 /**
  */
+Vector4 Mul(Vector4 const &V1, float c) {
+  Vector4 const Result{V1.x * c, V1.y * c, V1.y * c, V1.w * c};
+  return Result;
+}
+
+/**
+ */
 Vector4 Sub(Vector4 const &V1, Vector4 const &V2) {
   return Vector4{V1.x - V2.x, V1.y - V2.y, V1.z - V2.z, V1.w - V2.w};
 }
@@ -161,6 +168,17 @@ bool Eq(Matrix const &M1, Matrix const &M2) {
                       M1.m15 == M2.m15    //!<
       ;
   return Result;
+}
+
+/**
+ * Computes the linear interpolation between A and B, if the parameter t is
+ * inside [0, 1]
+ */
+Vector4 Lerp(Vector4 const &A, Vector4 const &B, float t) {
+
+  if (t < 0.f || t > 1.f)
+    return {};
+  return A + (B - A) * t;
 }
 
 /**
@@ -425,6 +443,18 @@ auto Test3dScreenCalculations() -> void {
     std::cout << "Pixel cositi :" << M * Pe << std::endl;
   }
 }
+
+/**
+ */
+auto TestLerp() -> void {
+  Vector4 Start = es::Vector(1.f, 0.f, 0.f);
+  Vector4 End = es::Vector(1.f, 1.f, 0.f);
+  for (int Idx = 0; Idx < 100; ++Idx) {
+    float const c = float(Idx) / 100.f;
+    std::cout << "Lerp at c=" << c << " = " << es::Lerp(Start, End, c)
+              << std::endl;
+  }
+}
 }; // namespace es
 
 Matrix operator*(Matrix const &M1, Matrix const &M2) { return es::Mul(M1, M2); }
@@ -432,6 +462,7 @@ Matrix operator+(Matrix const &M1, Matrix const &M2) { return es::Add(M1, M2); }
 bool operator==(Matrix const &M1, Matrix const &M2) { return es::Eq(M1, M2); }
 bool operator!=(Matrix const &M1, Matrix const &M2) { return !(M1 == M2); }
 Vector4 operator*(Matrix const &M, Vector4 const &V) { return es::Mul(M, V); }
+Vector4 operator*(Vector4 const &V1, float c) { return es::Mul(V1, c); }
 Vector4 operator+(Vector4 const &V1, Vector4 const &V2) {
   return es::Add(V1, V2);
 }
