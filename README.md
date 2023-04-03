@@ -30,12 +30,10 @@ rm -rf build
 cmake -B build
 cmake --build build
 ```
-Or if Ninja build is preferred:
 
-```bash
-cmake -B build -G Ninja
-cmake --build build
-```
+## Know issues
+
+Ninja build does not work with CMake's Fetchcontent. So only "Unix Makefiles" are supported.
 
 ## Dependencies
 
