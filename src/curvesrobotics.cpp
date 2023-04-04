@@ -300,20 +300,31 @@ auto InitEng2PixelMatrix(Vector4 const &OrigoScreen,
 }
 
 // ---
+// NOTE: Lamda to write/draw text placed in engineering units.
+// ---
+auto ldaDrawText = [](Matrix const &Hep, Vector4 const &Pos,
+                      std::string const &Text, int FontSize = 20,
+                      Color Col = BLUE, float Alpha = 1.f) -> void {
+  auto const PixelPos = Hep * Pos;
+  DrawLine(PixelPos.x, PixelPos.y, 0, 0, BLUE);
+  DrawText(Text.c_str(), PixelPos.x, PixelPos.y, FontSize, Col);
+};
+
+// ---
 // NOTE: Lamda to draw a point. Actually it draws a small circle.
 // ---
-auto ldaDrawPoint = [](Matrix const &Hep, Vector4 const &P,
+auto ldaDrawPoint = [](Matrix const &Hep, Vector4 const &Pos,
                        Vector4 const &m2Pixel, bool Print = false,
                        Color Col = BLUE, float Alpha = 1.f) -> void {
-  auto CurvePoint = Hep * P;
-  DrawPixel(CurvePoint.x, CurvePoint.y, ColorAlpha(RED, Alpha));
+  auto PixelPos = Hep * Pos;
+  DrawPixel(PixelPos.x, PixelPos.y, ColorAlpha(RED, Alpha));
   constexpr float Radius = 0.01f;
-  DrawCircleLines(CurvePoint.x, CurvePoint.y, Radius * m2Pixel.x,
+  DrawCircleLines(PixelPos.x, PixelPos.y, Radius * m2Pixel.x,
                   ColorAlpha(Col, Alpha));
   if (Print) {
-    DrawLine(CurvePoint.x, CurvePoint.y, 0, 0, BLUE);
-    DrawText(std::string("CurvePoint x/y: " + std::to_string(CurvePoint.x) +
-                         " / " + std::to_string(CurvePoint.y))
+    DrawLine(PixelPos.x, PixelPos.y, 0, 0, BLUE);
+    DrawText(std::string("CurvePoint x/y: " + std::to_string(PixelPos.x) +
+                         " / " + std::to_string(PixelPos.y))
                  .c_str(),
              140, 70, 20, BLUE);
   }
@@ -475,6 +486,12 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
                .c_str(),
            140, 40, 20, BLUE);
 
+  ldaDrawText(pData->Hep,
+              es::Point(pData->GridCfg.GridCentre.x -
+                            pData->GridCfg.GridDimensions.x / 2.f,
+                        -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f), 0.f),
+              pData->WikipediaLink);
+
   HandleKeyboardInput(pData);
 
   // ---
@@ -571,6 +588,12 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
                        ". Time:" + std::to_string(pData->Xcalc))
                .c_str(),
            140, 40, 20, BLUE);
+
+  ldaDrawText(pData->Hep,
+              es::Point(pData->GridCfg.GridCentre.x -
+                            pData->GridCfg.GridDimensions.x / 2.f,
+                        -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f), 0.f),
+              pData->WikipediaLink);
 
   HandleKeyboardInput(pData);
 
