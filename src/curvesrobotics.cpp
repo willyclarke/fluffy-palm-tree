@@ -68,7 +68,10 @@ struct data {
 
   int screenWidth = 1280;
   int screenHeight = 768;
-  int PageNum{};
+
+  enum class pages { PageAsteroid, PageFourier, PageHelp };
+  pages PageNum{};
+
   int Key{};
   int KeyPrv{};
   bool TakeScreenshot{};
@@ -457,6 +460,12 @@ auto HandleKeyboardInput(data *pData) -> bool {
  * Draw an animation of n - terms of a Fourier square wave.
  */
 auto UpdateDrawFrameFourier(data *pData) -> void {
+
+  if (data::pages::PageFourier != pData->PageNum) {
+    pData->WikipediaLink = "https://en.wikipedia.org/wiki/Square_wave";
+    pData->PageNum = data::pages::PageFourier;
+  }
+
   BeginDrawing();
   ClearBackground(RAYWHITE);
 
@@ -550,9 +559,9 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
  */
 auto UpdateDrawFrameAsteroid(data *pData) -> void {
 
-  if (2 != pData->PageNum) {
+  if (data::pages::PageAsteroid != pData->PageNum) {
     pData->WikipediaLink = "https://en.wikipedia.org/wiki/Astroid";
-    pData->PageNum = 2;
+    pData->PageNum = data::pages::PageAsteroid;
   }
 
   BeginDrawing();
@@ -667,8 +676,9 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
  */
 auto UpdateDrawFrameHelp(data *pData) -> void {
 
-  if (0 != pData->PageNum) {
-    pData->PageNum = 0;
+  if (data::pages::PageHelp != pData->PageNum) {
+    pData->WikipediaLink = "";
+    pData->PageNum = data::pages::PageHelp;
   }
 
   BeginDrawing();

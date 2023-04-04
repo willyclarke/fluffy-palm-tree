@@ -1,6 +1,7 @@
 # Directories
 .cache/**
 build/**
+.DS_Store
 
 # Prerequisites
 *.d
