@@ -97,6 +97,14 @@ struct data {
 
   Vector4 vEngOffset{}; //!< Position of figure in engineering space.
   Vector4 vPixelsPerUnit{100.f, 100.f, 100.f, 0.f};
+  Vector4 MousePosEng{};
+  struct mouse_input {
+    bool MouseButtonPressed{};
+    bool MouseButtonDown{};
+    bool MouseButtonReleased{};
+    bool MouseButtonUp{};
+  };
+  mouse_input MouseInput{};
 };
 
 /*
@@ -319,8 +327,8 @@ auto ldaDrawBox = [](Matrix const &MhE2P, Vector4 const &Pos,
 
   auto const PixPosStrt = MhE2P * Pos;
   auto const PixPosEnd = MhE2P * (Pos + Dim);
-  DrawLine(PixPosStrt.x, PixPosStrt.y, 0, 0, VIOLET);
-  DrawLine(PixPosEnd.x, PixPosEnd.y, 0, 0, ORANGE);
+  // DrawLine(PixPosStrt.x, PixPosStrt.y, 0, 0, VIOLET); //!< Debug help line.
+  // DrawLine(PixPosEnd.x, PixPosEnd.y, 0, 0, ORANGE); //!< Debug help line.
   DrawLine(PixPosStrt.x, PixPosStrt.y, PixPosEnd.x, PixPosStrt.y, C);
   DrawLine(PixPosEnd.x, PixPosStrt.y, PixPosEnd.x, PixPosEnd.y, C);
   DrawLine(PixPosStrt.x, PixPosStrt.y, PixPosStrt.x, PixPosEnd.y, C);
@@ -336,7 +344,7 @@ auto ldaDrawText = [](Matrix const &MhE2P, Vector4 const &Pos,
                       float AlphaBox = 1.f) -> void {
   auto const PixelPos = MhE2P * Pos;
 
-  DrawLine(PixelPos.x, PixelPos.y, 0, 0, BLUE);
+  // DrawLine(PixelPos.x, PixelPos.y, 0, 0, BLUE); //!< Debug help line.
   DrawText(Text.c_str(), PixelPos.x, PixelPos.y, FontSize, Col);
 };
 
@@ -420,8 +428,11 @@ auto UpdateDrawFrameHelp(data *pData) -> void;
 auto HandleInput(data *pData) -> bool {
 
   auto const MousePos = GetMousePosition();
-  auto const MousePosEng =
-      pData->MhE2PInv * es::Point(MousePos.x, MousePos.y, 0.f);
+  pData->MousePosEng = pData->MhE2PInv * es::Point(MousePos.x, MousePos.y, 0.f);
+  pData->MouseInput.MouseButtonUp = IsMouseButtonUp(0);
+  pData->MouseInput.MouseButtonDown = IsMouseButtonDown(0);
+  pData->MouseInput.MouseButtonPressed = IsMouseButtonPressed(0);
+  pData->MouseInput.MouseButtonReleased = IsMouseButtonReleased(0);
 
   DrawText(std::string("Use arrow keys. Zoom: " +
                        std::to_string(pData->vPixelsPerUnit.x) +
@@ -429,8 +440,8 @@ auto HandleInput(data *pData) -> bool {
                        // std::to_string(pData->CurrentTrendPoint) +
                        ". Mouse: " + std::to_string(MousePos.x) + " " +
                        std::to_string(MousePos.y) +
-                       ". Mouse Eng: " + std::to_string(MousePosEng.x) + " " +
-                       std::to_string(MousePosEng.y))
+                       ". Mouse Eng: " + std::to_string(pData->MousePosEng.x) +
+                       " " + std::to_string(pData->MousePosEng.y))
                .c_str(),
            140, 10, 20, BLUE);
 
@@ -526,19 +537,34 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
                .c_str(),
            140, 40, 20, BLUE);
 
-  ldaDrawText(pData->MhE2P,
-              es::Point(pData->GridCfg.GridCentre.x -
-                            pData->GridCfg.GridDimensions.x / 2.f,
-                        -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f), 0.f),
-              pData->WikipediaLink);
+  {
+    ldaDrawText(pData->MhE2P,
+                es::Point(pData->GridCfg.GridCentre.x -
+                              pData->GridCfg.GridDimensions.x / 2.f,
+                          -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f),
+                          0.f),
+                pData->WikipediaLink);
 
-  auto const Dim = es::Vector(5.f / 8.f * pData->GridCfg.GridDimensions.x,
-                              pData->GridCfg.GridDimensions.y / 15.f, 0.f);
-  ldaDrawBox(pData->MhE2P,
-             es::Point(pData->GridCfg.GridCentre.x -
-                           21.f * pData->GridCfg.GridDimensions.x / 40.f,
-                       -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f), 0.f),
-             Dim);
+    auto const BoxPosition =
+        es::Point(pData->GridCfg.GridCentre.x -
+                      21.f * pData->GridCfg.GridDimensions.x / 40.f,
+                  -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f), 0.f);
+    auto const BoxDimension =
+        es::Vector(5.f / 8.f * pData->GridCfg.GridDimensions.x,
+                   pData->GridCfg.GridDimensions.y / 15.f, 0.f);
+
+    if (pData->MousePosEng.x > BoxPosition.x &&
+        pData->MousePosEng.x < (BoxPosition.x + BoxDimension.x) &&
+        pData->MousePosEng.y > BoxPosition.y &&
+        pData->MousePosEng.y < (BoxPosition.y + BoxDimension.y)) {
+
+      ldaDrawBox(pData->MhE2P, BoxPosition, BoxDimension);
+
+      if (pData->MouseInput.MouseButtonReleased)
+        if (!pData->WikipediaLink.empty())
+          OpenURL(pData->WikipediaLink.c_str());
+    }
+  }
 
   HandleInput(pData);
 
@@ -644,6 +670,28 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
 
     ldaDrawText(pData->MhE2P, PosTxt, pData->WikipediaLink, 20, GREEN, 0.7f,
                 0.05f);
+
+    {
+      auto const BoxPosition =
+          es::Point(pData->GridCfg.GridCentre.x -
+                        21.f * pData->GridCfg.GridDimensions.x / 40.f,
+                    -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f), 0.f);
+      auto const BoxDimension =
+          es::Vector(5.f / 8.f * pData->GridCfg.GridDimensions.x,
+                     pData->GridCfg.GridDimensions.y / 15.f, 0.f);
+
+      if (pData->MousePosEng.x > BoxPosition.x &&
+          pData->MousePosEng.x < (BoxPosition.x + BoxDimension.x) &&
+          pData->MousePosEng.y > BoxPosition.y &&
+          pData->MousePosEng.y < (BoxPosition.y + BoxDimension.y)) {
+
+        ldaDrawBox(pData->MhE2P, BoxPosition, BoxDimension);
+
+        if (pData->MouseInput.MouseButtonReleased)
+          if (!pData->WikipediaLink.empty())
+            OpenURL(pData->WikipediaLink.c_str());
+      }
+    }
   }
 
   HandleInput(pData);
