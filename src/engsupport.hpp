@@ -22,11 +22,17 @@ void TestHomogenousMatrix();
 auto Test3dCalucations() -> void;
 auto Test3dScreenCalculations() -> void;
 auto TestLerp() -> void;
+auto TestInvert() -> void;
 
 /**
  * Identity matrix 4x4
  */
 Matrix I();
+
+/**
+ * Compute the determinant and check it to find out if matrix is invertible.
+ */
+bool IsMatrixInvertible(Matrix const &In);
 
 //------------------------------------------------------------------------------
 /**

@@ -10,6 +10,10 @@
 
 #include "engsupport.hpp"
 #include "raylib.h"
+
+#define RAYMATH_IMPLEMENTATION // Define external out-of-line implementation
+#include "raymath.h"           // Vector3, Quaternion and Matrix functionality
+
 #include <iomanip>
 
 /**
@@ -28,6 +32,25 @@ Matrix I() {
   M.m15 = 1.f;
   return M;
 }
+
+/**
+ * Compute the Determinant of a 4x4 matrix.
+ */
+float Determinant(Matrix const &In) {
+  float const Det = In.m0 * (In.m5 * In.m10 - In.m9 * In.m6) -
+                    In.m4 * (In.m1 * In.m10 - In.m9 * In.m2) +
+                    In.m8 * (In.m1 * In.m6 - In.m5 * In.m2) -
+                    In.m12 * (In.m1 * In.m6 * In.m11 - In.m1 * In.m10 * In.m7 -
+                              In.m5 * In.m2 * In.m11 + In.m5 * In.m10 * In.m3 +
+                              In.m9 * In.m2 * In.m7 - In.m9 * In.m6 * In.m3);
+
+  return Det;
+}
+
+/**
+ * Return true when matrix is invertible.
+ */
+bool IsMatrixInvertible(Matrix const &In) { return Determinant(In) != 0.0f; }
 
 //------------------------------------------------------------------------------
 /**
@@ -453,6 +476,56 @@ auto TestLerp() -> void {
     float const c = float(Idx) / 100.f;
     std::cout << "Lerp at c=" << c << " = " << es::Lerp(Start, End, c)
               << std::endl;
+  }
+}
+
+/**
+ * Test if a matrix is invertible.
+ */
+auto TestInvert() -> void {
+
+  Matrix A{
+      1.f, 2.f, 3.f, 4.f, //!<
+      5.f, 6.f, 7.f, 8.f, //!<
+      9.f, 8.f, 7.f, 6.f, //!<
+      5.f, 4.f, 3.f, 2.f  //!<
+  };
+  Matrix B{
+      -2.f, 1.f, 2.f, 3.f,  //!<
+      3.f,  2.f, 1.f, -1.f, //!<
+      4.f,  3.f, 6.f, 5.f,  //!<
+      1.f,  2.f, 7.f, 8.f   //!<
+  };
+  Matrix Expect{
+      20.f, 22.f, 50.f,  48.f,  //!<
+      44.f, 54.f, 114.f, 108.f, //!<
+      40.f, 58.f, 110.f, 102.f, //!<
+      16.f, 26.f, 46.f,  42.f   //!<
+  };
+
+  auto const M = A * B;
+  if (M != Expect) {
+    std::cerr << "Matrix multiplication failed. Line: " << __LINE__
+              << std::endl;
+    std::cerr << "Calculated Matrix:" << M << std::endl;
+    std::cerr << "Expected Matrix:" << Expect << std::endl;
+  }
+  auto AIsInvertible = es::IsMatrixInvertible(A);
+  auto BIsInvertible = es::IsMatrixInvertible(B);
+
+  std::cout << "Matrix A is "
+            << (AIsInvertible ? "invertible" : "not invertible") << std::endl;
+  std::cout << "Matrix B is "
+            << (BIsInvertible ? "invertible" : "not invertible") << std::endl;
+  if (BIsInvertible) {
+    auto InvB = MatrixInvert(B);
+    auto TstInv = B * InvB;
+    std::cout << InvB << std::endl;
+    std::cout << TstInv << std::endl;
+    if (TstInv != I()) {
+      std::cerr << __FUNCTION__ << " -> FAIL: Invert of Matrix B: " << B
+                << std::endl;
+    }
   }
 }
 }; // namespace es

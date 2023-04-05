@@ -14,6 +14,9 @@
 #include "engsupport.hpp"
 #include "raylib.h"
 
+#define RAYMATH_IMPLEMENTATION // Define external out-of-line implementation
+#include "raymath.h"           // Vector3, Quaternion and Matrix functionality
+
 #include <algorithm>
 
 #define _USE_MATH_DEFINES
@@ -86,8 +89,11 @@ struct data {
   size_t NumTrendPoints{};
   grid_cfg GridCfg{};
 
-  Matrix Hep{}; //!< Homogenous matrix for conversion from engineering space to
-                //!< pixelspace.
+  Matrix MhE2P{}; //!< Homogenous matrix for conversion from engineering space
+                  //!< to pixelspace.
+
+  Matrix MhE2PInv{}; //!< Homogenous matrix for conversion from pixel
+                     //!< space to engineering space.
 
   Vector4 vEngOffset{}; //!< Position of figure in engineering space.
   Vector4 vPixelsPerUnit{100.f, 100.f, 100.f, 0.f};
@@ -96,10 +102,10 @@ struct data {
 /*
  * Create lines and ticks for a grid in engineering units.
  */
-auto GridCfgInPixels(Matrix const &Hep, //!< Homogenous matrix from engineering
-                                        //!< to pixel position.
-                     float GridLength = 8.f,   //!<
-                     float GridHeight = 6.f,   //!<
+auto GridCfgInPixels(Matrix const &MhE2P,    //!< Homogenous matrix from
+                                             //!< engineering to pixel position.
+                     float GridLength = 8.f, //!<
+                     float GridHeight = 6.f, //!<
                      float GridXCentre = 0.f,  //!<
                      float GridYCentre = 0.f,  //!<
                      float TickDistance = 0.1f //!<
@@ -217,8 +223,8 @@ auto GridCfgInPixels(Matrix const &Hep, //!< Homogenous matrix from engineering
   // NOTE: Create major dividers.
   // ---
   for (auto const &Elem : vGridPoint) {
-    auto const ToPixel = Hep * es::Point(Elem.toX, Elem.toY, 0.f);
-    auto const FromPixel = Hep * es::Point(Elem.fromX, Elem.fromY, 0.f);
+    auto const ToPixel = MhE2P * es::Point(Elem.toX, Elem.toY, 0.f);
+    auto const FromPixel = MhE2P * es::Point(Elem.fromX, Elem.fromY, 0.f);
 
     // ---
     // NOTE: Convert the floating point indicators.
@@ -255,8 +261,8 @@ auto GridCfgInPixels(Matrix const &Hep, //!< Homogenous matrix from engineering
   // NOTE: Create the minor dividers.
   // ---
   for (auto const &Elem : vGridSubDivider) {
-    auto const ToPixel = Hep * es::Point(Elem.toX, Elem.toY, 0.f);
-    auto const FromPixel = Hep * es::Point(Elem.fromX, Elem.fromY, 0.f);
+    auto const ToPixel = MhE2P * es::Point(Elem.toX, Elem.toY, 0.f);
+    auto const FromPixel = MhE2P * es::Point(Elem.fromX, Elem.fromY, 0.f);
     Result.vGridLines.push_back({int(ToPixel.x), int(ToPixel.y)});
     Result.vGridLines.push_back({int(FromPixel.x), int(FromPixel.y)});
   }
@@ -300,12 +306,36 @@ auto InitEng2PixelMatrix(Vector4 const &OrigoScreen,
 }
 
 // ---
+// NOTE: Lamda to draw a box in engineering units.
+// @MhE2P - Homogenous matrix to convert from engineering to pixelspace
+// @Pos - Lower Left X, Lower Left Y
+// @Dim - Length, Height
+// ---
+auto ldaDrawBox = [](Matrix const &MhE2P, Vector4 const &Pos,
+                     Vector4 const &Dim, Color Col = BLUE,
+                     float Alpha = 1.f) -> void {
+  Color C = Col;
+  C.a = 0xFF & int(float(int(Col.a) * Alpha * 255.f / 255.f));
+
+  auto const PixPosStrt = MhE2P * Pos;
+  auto const PixPosEnd = MhE2P * (Pos + Dim);
+  DrawLine(PixPosStrt.x, PixPosStrt.y, 0, 0, VIOLET);
+  DrawLine(PixPosEnd.x, PixPosEnd.y, 0, 0, ORANGE);
+  DrawLine(PixPosStrt.x, PixPosStrt.y, PixPosEnd.x, PixPosStrt.y, C);
+  DrawLine(PixPosEnd.x, PixPosStrt.y, PixPosEnd.x, PixPosEnd.y, C);
+  DrawLine(PixPosStrt.x, PixPosStrt.y, PixPosStrt.x, PixPosEnd.y, C);
+  DrawLine(PixPosStrt.x, PixPosEnd.y, PixPosEnd.x, PixPosEnd.y, C);
+};
+
+// ---
 // NOTE: Lamda to write/draw text placed in engineering units.
 // ---
-auto ldaDrawText = [](Matrix const &Hep, Vector4 const &Pos,
+auto ldaDrawText = [](Matrix const &MhE2P, Vector4 const &Pos,
                       std::string const &Text, int FontSize = 20,
-                      Color Col = BLUE, float Alpha = 1.f) -> void {
-  auto const PixelPos = Hep * Pos;
+                      Color Col = BLUE, float AlphaText = 1.f,
+                      float AlphaBox = 1.f) -> void {
+  auto const PixelPos = MhE2P * Pos;
+
   DrawLine(PixelPos.x, PixelPos.y, 0, 0, BLUE);
   DrawText(Text.c_str(), PixelPos.x, PixelPos.y, FontSize, Col);
 };
@@ -313,10 +343,10 @@ auto ldaDrawText = [](Matrix const &Hep, Vector4 const &Pos,
 // ---
 // NOTE: Lamda to draw a point. Actually it draws a small circle.
 // ---
-auto ldaDrawPoint = [](Matrix const &Hep, Vector4 const &Pos,
+auto ldaDrawPoint = [](Matrix const &MhE2P, Vector4 const &Pos,
                        Vector4 const &m2Pixel, bool Print = false,
                        Color Col = BLUE, float Alpha = 1.f) -> void {
-  auto PixelPos = Hep * Pos;
+  auto PixelPos = MhE2P * Pos;
   DrawPixel(PixelPos.x, PixelPos.y, ColorAlpha(RED, Alpha));
   constexpr float Radius = 0.01f;
   DrawCircleLines(PixelPos.x, PixelPos.y, Radius * m2Pixel.x,
@@ -333,31 +363,32 @@ auto ldaDrawPoint = [](Matrix const &Hep, Vector4 const &Pos,
 /**
  * Draw a circle with Radius - go figure.
  */
-auto ldaDrawCircle = [](Matrix const &Hep, Vector4 const &Centre, float Radius,
-                        Color Col = BLUE) -> void {
-  auto CurvePoint = Hep * Centre;
-  // Use Hep.m5 for scaling/zoom factor.
-  DrawCircleLines(CurvePoint.x, CurvePoint.y, Radius * Hep.m5, Fade(Col, 0.9f));
+auto ldaDrawCircle = [](Matrix const &MhE2P, Vector4 const &Centre,
+                        float Radius, Color Col = BLUE) -> void {
+  auto CurvePoint = MhE2P * Centre;
+  // Use MhE2P.m5 for scaling/zoom factor.
+  DrawCircleLines(CurvePoint.x, CurvePoint.y, Radius * MhE2P.m5,
+                  Fade(Col, 0.9f));
 };
 
 /**
  * Draw a circle with Radius - filled gradient version.
  */
-auto ldaDrawCircleG = [](Matrix const &Hep, Vector4 const &Centre, float Radius,
-                         Color Col = BLUE) -> void {
-  auto CurvePoint = Hep * Centre;
-  // Use Hep.m5 for scaling/zoom factor.
-  DrawCircleGradient(CurvePoint.x, CurvePoint.y, Radius * Hep.m5,
+auto ldaDrawCircleG = [](Matrix const &MhE2P, Vector4 const &Centre,
+                         float Radius, Color Col = BLUE) -> void {
+  auto CurvePoint = MhE2P * Centre;
+  // Use MhE2P.m5 for scaling/zoom factor.
+  DrawCircleGradient(CurvePoint.x, CurvePoint.y, Radius * MhE2P.m5,
                      Fade(Col, 0.3f), Col);
 };
 
 /**
  * Function to draw a line between two points.
  */
-auto ldaDrawLine = [](Matrix const &Hep, Vector4 const &From, Vector4 const &To,
-                      Color Col = BLUE) -> void {
-  auto F = Hep * From;
-  auto T = Hep * To;
+auto ldaDrawLine = [](Matrix const &MhE2P, Vector4 const &From,
+                      Vector4 const &To, Color Col = BLUE) -> void {
+  auto F = MhE2P * From;
+  auto T = MhE2P * To;
   DrawLine(F.x, F.y, T.x, T.y, BLUE);
 };
 
@@ -386,14 +417,22 @@ auto UpdateDrawFrameHelp(data *pData) -> void;
 /**
  * Keyboard input handling common to all the drawing routines.
  */
-auto HandleKeyboardInput(data *pData) -> bool {
+auto HandleInput(data *pData) -> bool {
 
-  DrawText(
-      std::string(
-          "Use arrow keys. Zoom: " + std::to_string(pData->vPixelsPerUnit.x) +
-          ". CurrentTrendPoint :" + std::to_string(pData->CurrentTrendPoint))
-          .c_str(),
-      140, 10, 20, BLUE);
+  auto const MousePos = GetMousePosition();
+  auto const MousePosEng =
+      pData->MhE2PInv * es::Point(MousePos.x, MousePos.y, 0.f);
+
+  DrawText(std::string("Use arrow keys. Zoom: " +
+                       std::to_string(pData->vPixelsPerUnit.x) +
+                       // ". CurrentTrendPoint :" +
+                       // std::to_string(pData->CurrentTrendPoint) +
+                       ". Mouse: " + std::to_string(MousePos.x) + " " +
+                       std::to_string(MousePos.y) +
+                       ". Mouse Eng: " + std::to_string(MousePosEng.x) + " " +
+                       std::to_string(MousePosEng.y))
+               .c_str(),
+           140, 10, 20, BLUE);
 
   bool InputChanged{};
 
@@ -452,12 +491,13 @@ auto HandleKeyboardInput(data *pData) -> bool {
     pData->Xcalc = 0.0;
     pData->CurrentTrendPoint = 0;
 
-    pData->Hep = InitEng2PixelMatrix(
+    pData->MhE2P = InitEng2PixelMatrix(
         pData->vEngOffset, pData->vPixelsPerUnit,
         {pData->screenWidth / 2.f, pData->screenHeight / 2.f, 0.f, 0.f});
+    pData->MhE2PInv = MatrixInvert(pData->MhE2P);
 
     pData->GridCfg =
-        GridCfgInPixels(pData->Hep,
+        GridCfgInPixels(pData->MhE2P,
                         pData->GridCfg.GridDimensions.x * PixelPerUnitPrv.x /
                             pData->vPixelsPerUnit.x,
                         pData->GridCfg.GridDimensions.y * PixelPerUnitPrv.y /
@@ -486,13 +526,21 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
                .c_str(),
            140, 40, 20, BLUE);
 
-  ldaDrawText(pData->Hep,
+  ldaDrawText(pData->MhE2P,
               es::Point(pData->GridCfg.GridCentre.x -
                             pData->GridCfg.GridDimensions.x / 2.f,
                         -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f), 0.f),
               pData->WikipediaLink);
 
-  HandleKeyboardInput(pData);
+  auto const Dim = es::Vector(5.f / 8.f * pData->GridCfg.GridDimensions.x,
+                              pData->GridCfg.GridDimensions.y / 15.f, 0.f);
+  ldaDrawBox(pData->MhE2P,
+             es::Point(pData->GridCfg.GridCentre.x -
+                           21.f * pData->GridCfg.GridDimensions.x / 40.f,
+                       -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f), 0.f),
+             Dim);
+
+  HandleInput(pData);
 
   // ---
   // NOTE: Draw the grid.
@@ -511,10 +559,10 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
   auto Ft =
       Centre + es::Vector(Radius * cosf(Omegat), Radius * sinf(Omegat), 0.f);
 
-  ldaDrawCircle(pData->Hep, Centre, Radius);
+  ldaDrawCircle(pData->MhE2P, Centre, Radius);
 
   // Draw the outer circle line
-  ldaDrawLine(pData->Hep, Centre, Ft);
+  ldaDrawLine(pData->MhE2P, Centre, Ft);
 
   // ---
   // Create the Fourier series.
@@ -524,8 +572,8 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
     auto nthTerm = 1.f + Idx * 2.f;
     auto Ftn = Ftp + es::Vector(Radius / nthTerm * cosf(nthTerm * Omegat),
                                 Radius / nthTerm * sinf(nthTerm * Omegat), 0.f);
-    ldaDrawLine(pData->Hep, Ftp, Ftn);
-    ldaDrawCircle(pData->Hep, Ftn, Radius / nthTerm);
+    ldaDrawLine(pData->MhE2P, Ftp, Ftn);
+    ldaDrawCircle(pData->MhE2P, Ftn, Radius / nthTerm);
     Ftp = Ftn;
   }
 
@@ -550,14 +598,14 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
   pData->vTrendPoints[pData->CurrentTrendPoint] = (AnimationPoint);
 
   for (size_t Idx = 0; Idx < pData->CurrentTrendPoint; ++Idx) {
-    ldaDrawPoint(pData->Hep, pData->vTrendPoints[Idx],
-                 {pData->Hep.m0, pData->Hep.m5, 0.f, 0.f});
+    ldaDrawPoint(pData->MhE2P, pData->vTrendPoints[Idx],
+                 {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f});
   }
 
   // Draw the inner circle line
-  ldaDrawLine(pData->Hep, Ft, Ftp);
+  ldaDrawLine(pData->MhE2P, Ft, Ftp);
   // Draw the connecting line
-  ldaDrawLine(pData->Hep, Ftp, AnimationPoint);
+  ldaDrawLine(pData->MhE2P, Ftp, AnimationPoint);
 
   ++pData->CurrentTrendPoint;
 
@@ -589,13 +637,16 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
                .c_str(),
            140, 40, 20, BLUE);
 
-  ldaDrawText(pData->Hep,
-              es::Point(pData->GridCfg.GridCentre.x -
-                            pData->GridCfg.GridDimensions.x / 2.f,
-                        -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f), 0.f),
-              pData->WikipediaLink);
+  {
+    auto const PosTxt = es::Point(
+        pData->GridCfg.GridCentre.x - pData->GridCfg.GridDimensions.x / 2.f,
+        -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f), 0.f);
 
-  HandleKeyboardInput(pData);
+    ldaDrawText(pData->MhE2P, PosTxt, pData->WikipediaLink, 20, GREEN, 0.7f,
+                0.05f);
+  }
+
+  HandleInput(pData);
 
   // ---
   // NOTE: Draw the grid.
@@ -627,11 +678,11 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
   auto constexpr DotSize = 0.025f;
 
   // Draw the small circle.
-  ldaDrawCircle(pData->Hep, AnimationSmallCircle, Radius / 4.f);
-  ldaDrawCircleG(pData->Hep, AnimationSmallCircle, DotSize);
+  ldaDrawCircle(pData->MhE2P, AnimationSmallCircle, Radius / 4.f);
+  ldaDrawCircleG(pData->MhE2P, AnimationSmallCircle, DotSize);
 
   // Draw the fixed circle.
-  ldaDrawCircle(pData->Hep, GridStart, Radius);
+  ldaDrawCircle(pData->MhE2P, GridStart, Radius);
 
   pData->Xcalc += pData->dt;
 
@@ -672,13 +723,13 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
     auto const t = float(Idx) / float(pData->NumTrendPoints) + t0;
     Alpha = es::Lerp(es::Vector(0.f, 0.f, 0.f), es::Vector(1.f, 0.f, 0.f), t).x;
 
-    ldaDrawPoint(pData->Hep, pData->vTrendPoints[Idx],
-                 {pData->Hep.m0, pData->Hep.m5, 0.f, 0.f}, false,
+    ldaDrawPoint(pData->MhE2P, pData->vTrendPoints[Idx],
+                 {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f}, false,
                  Idx < pData->CurrentTrendPoint ? BLUE : RED, Alpha);
   }
 
-  ldaDrawLine(pData->Hep, AnimationPoint, AnimationSmallCircle);
-  ldaDrawCircleG(pData->Hep, AnimationPoint, DotSize, ORANGE);
+  ldaDrawLine(pData->MhE2P, AnimationPoint, AnimationSmallCircle);
+  ldaDrawCircleG(pData->MhE2P, AnimationPoint, DotSize, ORANGE);
 
   ++pData->CurrentTrendPoint;
 
@@ -725,7 +776,7 @@ auto UpdateDrawFrameHelp(data *pData) -> void {
     ldaDisplayHelpText(E);
   }
 
-  HandleKeyboardInput(pData);
+  HandleInput(pData);
 
   EndDrawing();
 }
@@ -744,14 +795,12 @@ auto main(int argc, char const *argv[]) -> int {
     es::Test3dCalucations();
     es::Test3dScreenCalculations();
     es::TestLerp();
+    es::TestInvert();
     return 0;
   }
 
   data Data{};
   Data.vTrendPoints.resize(size_t(Data.screenWidth * Data.screenHeight));
-
-  std::cout << "Size of trend is " << Data.vTrendPoints.size() << std::endl;
-
   auto pData = &Data;
 
   // Initialization
@@ -773,19 +822,44 @@ auto main(int argc, char const *argv[]) -> int {
   // be added to the offset of the screen position in pixels.
   // ---
   Data.vEngOffset = es::Point(0.f, 0.f, 0.f);
-  Data.vPixelsPerUnit = es::Point(100.f, 100.f, 0.f);
+
+  // ---
+  // NOTE: All three xyz values are needed in vPixelsPerUnit to ensure
+  //       that the conversion matrix is invertible.
+  // ---
+  Data.vPixelsPerUnit = es::Point(100.f, 100.f, 100.f);
 
   // ---
   // NOTE: Set up Homogenous matrix for conversion to pixel space.
   // ---
-  Data.Hep = InitEng2PixelMatrix(
+  Data.MhE2P = InitEng2PixelMatrix(
       Data.vEngOffset, Data.vPixelsPerUnit,
       {Data.screenWidth / 2.f, Data.screenHeight / 2.f, 0.f, 0.f});
+
+  if (es::IsMatrixInvertible(Data.MhE2P)) {
+    Data.MhE2PInv = MatrixInvert(Data.MhE2P);
+    std::cout << "MatrixInvert: " << Data.MhE2PInv << std::endl;
+    std::cout << "Matrix      : " << Data.MhE2P << std::endl;
+
+    auto const OrigoScreenInPixels =
+        es::Point(Data.screenWidth / 2.f, Data.screenHeight / 2.f, 0.f);
+
+    std::cout << "Pixel Pos: " << OrigoScreenInPixels << std::endl;
+    std::cout << "Engin Pos: " << Data.MhE2PInv * OrigoScreenInPixels
+              << std::endl;
+
+  } else {
+    std::cerr << "The Homogenous matrix MhE2P is not invertible." << std::endl;
+    std::cout << Data.MhE2P << std::endl;
+    std::cerr << "Will not be able to convert to engineering pos from PixelPos."
+              << std::endl;
+    return 1;
+  }
 
   // ---
   // NOTE: Construct the grid pattern.
   // ---
-  Data.GridCfg = GridCfgInPixels(Data.Hep);
+  Data.GridCfg = GridCfgInPixels(Data.MhE2P);
 
   Data.UpdateDrawFramePointer = UpdateDrawFrameHelp;
 
