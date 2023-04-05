@@ -50,3 +50,13 @@ if (APPLE)
     target_link_libraries("${PROJECT_NAME}curves" "-framework Cocoa")
     target_link_libraries("${PROJECT_NAME}curves" "-framework OpenGL")
 endif()
+
+#############################################################
+#### Set up installer config.
+#############################################################
+install(TARGETS "${PROJECT_NAME}fourier" RUNTIME DESTINATION bin)
+install(TARGETS "${PROJECT_NAME}curves" RUNTIME DESTINATION bin)
+set(CPACK_PACKAGE_NAME "CoolStuff")
+set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+include(CPack)
+
