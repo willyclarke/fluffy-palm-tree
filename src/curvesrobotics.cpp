@@ -722,6 +722,10 @@ auto UpdateDrawFrameFractal(data *pData) -> void {
         pData->MousePosEng.y < (BoxPosition.y + BoxDimension.y)) {
 
       ldaDrawBox(pData->MhE2P, BoxPosition, BoxDimension);
+
+      if (pData->MouseInput.MouseButtonReleased)
+        if (!pData->WikipediaLink.empty())
+          OpenURL(pData->WikipediaLink.c_str());
     }
   }
 
