@@ -76,6 +76,16 @@ Matrix InitTranslationInv(Matrix const &M, Vector4 const &vTranslation) {
 }
 
 /**
+ */
+auto SetTranslation(Vector4 const &Origo) -> Matrix {
+  auto Result = es::I();
+  Result.m12 = Origo.x;
+  Result.m13 = Origo.y;
+  Result.m14 = Origo.z;
+  return Result;
+}
+
+/**
  * Defintions: A point in 3D space has w set to 1.
  *             A vector in 3D space has w set to 0.
  *             This implies that adding Vectors gives a new Vector.
@@ -124,7 +134,8 @@ Vector4 Mul(Matrix const &M, Vector4 const &V) {
 /**
  */
 Vector4 Add(Vector4 const &V1, Vector4 const &V2) {
-  return Vector4{V1.x + V2.x, V1.y + V2.y, V1.z + V2.z, V1.w + V2.w};
+  return Vector4{V1.x + V2.x, V1.y + V2.y, V1.z + V2.z,
+                 std::min(1.f, V1.w + V2.w)};
 }
 
 /**

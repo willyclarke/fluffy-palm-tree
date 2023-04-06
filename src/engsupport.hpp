@@ -43,6 +43,11 @@ bool IsMatrixInvertible(Matrix const &In);
 Matrix InitTranslationInv(Matrix const &M, Vector4 const &vTranslation);
 
 /**
+ * Use a Homogenous matrix to store a translation.
+ */
+auto SetTranslation(Vector4 const &Origo) -> Matrix;
+
+/**
  * Defintions: A point in 3D space has w set to 1.
  *             A vector in 3D space has w set to 0.
  *             This implies that adding Vectors gives a new Vector.
