@@ -43,12 +43,34 @@ endif()
 
 # Checks if OSX and links appropriate frameworks (Only required on MacOS)
 if (APPLE)
+  set(PROJECT_CURVES_OSX "${PROJECT_NAME}curvesosx")
+  add_executable(${PROJECT_CURVES_OSX} MACOSX_BUNDLE ${SRC}/curvesrobotics.cpp ${SRC}/engsupport.cpp)
+
+  get_target_property(MY_RAYLIB_INCLUDES raylib INCLUDE_DIRECTORIES)
+  foreach(dir ${MY_RAYLIB_INCLUDES})
+    target_include_directories(${PROJECT_CURVES_OSX} PRIVATE ${dir})
+  endforeach()
+
+  set_target_properties(${PROJECT_CURVES_OSX} PROPERTIES
+    BUNDLE True
+    MACOSX_BUNDLE_GUI_IDENTIFIER my.domain.style.identifier.${PROJECT_CURVES_OSX}
+    MACOSX_BUNDLE_BUNDLE_NAME ${PROJECT_CURVES_OSX}
+    MACOSX_BUNDLE_BUNDLE_VERSION "0.1"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "0.1"
+    MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/cmake/customtemplate.plist.in
+    )
+
     target_link_libraries("${PROJECT_NAME}fourier" "-framework IOKit")
     target_link_libraries("${PROJECT_NAME}fourier" "-framework Cocoa")
     target_link_libraries("${PROJECT_NAME}fourier" "-framework OpenGL")
     target_link_libraries("${PROJECT_NAME}curves" "-framework IOKit")
     target_link_libraries("${PROJECT_NAME}curves" "-framework Cocoa")
     target_link_libraries("${PROJECT_NAME}curves" "-framework OpenGL")
+    target_link_libraries("${PROJECT_CURVES_OSX}" "-framework IOKit")
+    target_link_libraries("${PROJECT_CURVES_OSX}" "-framework Cocoa")
+    target_link_libraries("${PROJECT_CURVES_OSX}" "-framework OpenGL")
+    target_link_libraries("${PROJECT_CURVES_OSX}" raylib)
+
 endif()
 
 #############################################################
