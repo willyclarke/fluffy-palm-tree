@@ -47,12 +47,18 @@ struct pixel_pos {
  * so that it can be passed around to the various routines that need it.
  */
 struct grid_cfg {
+  float TickDistance{0.1f};
+
   std::vector<pixel_pos> vGridLines{};
   std::vector<pixel_pos> vGridSubDivider{};
 
   /**
    */
-  Vector4 GridCentre{};
+  Vector4 GridScreenCentre{0.f, 0.f, 0.f, 1.f}; //!< Make it a Point.
+
+  /**
+   */
+  Vector4 GridOrigo{0.f, 0.f, 0.f, 1.f}; //!< Make it a Point.
 
   /**
    * x is GridLength
@@ -72,7 +78,7 @@ struct data {
   int screenWidth = 1280;
   int screenHeight = 768;
 
-  enum class pages { PageAsteroid, PageFourier, PageHelp };
+  enum class pages { PageAsteroid, PageFourier, PageFractal, PageHelp };
   pages PageNum{};
 
   int Key{};
@@ -95,8 +101,15 @@ struct data {
   Matrix MhE2PInv{}; //!< Homogenous matrix for conversion from pixel
                      //!< space to engineering space.
 
+  Matrix MhG2E{}; //!< Homogenous matrix for conversion from grid
+                  //!< space to engineering space.
+
+  Matrix MhG2EInv{}; //!< Homogenous matrix for conversion from grid
+                     //!< space to engineering space.
+
   Vector4 vEngOffset{}; //!< Position of figure in engineering space.
   Vector4 vPixelsPerUnit{100.f, 100.f, 100.f, 0.f};
+
   Vector4 MousePosEng{};
   struct mouse_input {
     bool MouseButtonPressed{};
@@ -110,17 +123,23 @@ struct data {
 /*
  * Create lines and ticks for a grid in engineering units.
  */
-auto GridCfgInPixels(Matrix const &MhE2P,    //!< Homogenous matrix from
-                                             //!< engineering to pixel position.
-                     float GridLength = 8.f, //!<
-                     float GridHeight = 6.f, //!<
-                     float GridXCentre = 0.f,  //!<
-                     float GridYCentre = 0.f,  //!<
-                     float TickDistance = 0.1f //!<
-                     ) -> grid_cfg {
+auto GridCfgInPixels(Matrix const &MhE2P, //!< Homogenous matrix from
+                     grid_cfg const &GridCfg) -> grid_cfg {
 
-  auto const GridXLowerLeft = GridXCentre - GridLength / 2.f;
-  auto const GridYLowerLeft = GridYCentre - GridHeight / 2.f;
+  auto Result = GridCfg;
+  Result.vGridLines.clear();
+  Result.vGridSubDivider.clear();
+
+  auto const GridLength = GridCfg.GridDimensions.x;
+  auto const GridHeight = GridCfg.GridDimensions.y;
+  auto const GridScreenXCentre = GridCfg.GridScreenCentre.x;
+  auto const GridScreenYCentre = GridCfg.GridScreenCentre.y;
+  auto const GridOrigoX = GridCfg.GridOrigo.x;
+  auto const GridOrigoY = GridCfg.GridOrigo.y;
+  auto TickDistance = GridCfg.TickDistance;
+
+  auto const GridXLowerLeft = GridScreenXCentre - GridLength / 2.f;
+  auto const GridYLowerLeft = GridScreenYCentre - GridHeight / 2.f;
   // ---
   // NOTE: Make and draw a grid.
   // ---
@@ -221,11 +240,13 @@ auto GridCfgInPixels(Matrix const &MhE2P,    //!< Homogenous matrix from
     }
   }
 
-  grid_cfg Result{};
-  Result.GridCentre.x = GridXLowerLeft + GridLength / 2.f;
-  Result.GridCentre.y = GridYLowerLeft + GridHeight / 2.f;
+  Result.GridScreenCentre.x = GridXLowerLeft + GridLength / 2.f;
+  Result.GridScreenCentre.y = GridYLowerLeft + GridHeight / 2.f;
   Result.GridDimensions.x = GridLength;
   Result.GridDimensions.y = GridHeight;
+
+  auto const MhG2E =
+      es::SetTranslation(es::Vector(GridOrigoX, GridOrigoY, 0.f));
 
   // ---
   // NOTE: Create major dividers.
@@ -257,8 +278,12 @@ auto GridCfgInPixels(Matrix const &MhE2P,    //!< Homogenous matrix from
     // ---
     // NOTE: Create the axis tag based on the setup from the grid.
     // ---
-    auto const &TagX = Elem.TagX ? ldaFloat2Str(Elem.fromX) : "";
-    auto const &TagY = Elem.TagY ? ldaFloat2Str(Elem.fromY) : "";
+    auto const &TagX =
+        Elem.TagX ? ldaFloat2Str((MhG2E * es::Point(Elem.fromX, 0.f, 0.f)).x)
+                  : "";
+    auto const &TagY =
+        Elem.TagY ? ldaFloat2Str((MhG2E * es::Point(0.f, Elem.fromY, 0.f)).y)
+                  : "";
     pixel_pos PixelPos = {int(ToPixel.x), int(ToPixel.y), DARKGRAY, TagX, TagY};
 
     Result.vGridLines.push_back(PixelPos);
@@ -327,8 +352,8 @@ auto ldaDrawBox = [](Matrix const &MhE2P, Vector4 const &Pos,
 
   auto const PixPosStrt = MhE2P * Pos;
   auto const PixPosEnd = MhE2P * (Pos + Dim);
-  // DrawLine(PixPosStrt.x, PixPosStrt.y, 0, 0, VIOLET); //!< Debug help line.
-  // DrawLine(PixPosEnd.x, PixPosEnd.y, 0, 0, ORANGE); //!< Debug help line.
+  DrawLine(PixPosStrt.x, PixPosStrt.y, 0, 0, VIOLET); //!< Debug help line.
+  DrawLine(PixPosEnd.x, PixPosEnd.y, 0, 0, ORANGE);   //!< Debug help line.
   DrawLine(PixPosStrt.x, PixPosStrt.y, PixPosEnd.x, PixPosStrt.y, C);
   DrawLine(PixPosEnd.x, PixPosStrt.y, PixPosEnd.x, PixPosEnd.y, C);
   DrawLine(PixPosStrt.x, PixPosStrt.y, PixPosStrt.x, PixPosEnd.y, C);
@@ -419,6 +444,7 @@ auto ldaShowGrid = [](data *pData) -> void {
 };
 
 auto UpdateDrawFrameFourier(data *pData) -> void;
+auto UpdateDrawFrameFractal(data *pData) -> void;
 auto UpdateDrawFrameAsteroid(data *pData) -> void;
 auto UpdateDrawFrameHelp(data *pData) -> void;
 
@@ -485,6 +511,9 @@ auto HandleInput(data *pData) -> bool {
     } else if (KEY_F == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameFourier;
       InputChanged = true;
+    } else if (KEY_R == pData->Key) {
+      pData->UpdateDrawFramePointer = &UpdateDrawFrameFractal;
+      InputChanged = true;
     } else if (KEY_L == pData->Key) {
       if (!pData->WikipediaLink.empty())
         OpenURL(pData->WikipediaLink.c_str());
@@ -507,12 +536,20 @@ auto HandleInput(data *pData) -> bool {
         {pData->screenWidth / 2.f, pData->screenHeight / 2.f, 0.f, 0.f});
     pData->MhE2PInv = MatrixInvert(pData->MhE2P);
 
-    pData->GridCfg =
-        GridCfgInPixels(pData->MhE2P,
-                        pData->GridCfg.GridDimensions.x * PixelPerUnitPrv.x /
-                            pData->vPixelsPerUnit.x,
-                        pData->GridCfg.GridDimensions.y * PixelPerUnitPrv.y /
-                            pData->vPixelsPerUnit.y);
+    pData->GridCfg.GridDimensions.x = pData->GridCfg.GridDimensions.x *
+                                      PixelPerUnitPrv.x /
+                                      pData->vPixelsPerUnit.x;
+    pData->GridCfg.GridDimensions.y = pData->GridCfg.GridDimensions.y *
+                                      PixelPerUnitPrv.y /
+                                      pData->vPixelsPerUnit.y;
+
+    pData->GridCfg = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
+  }
+
+  if (false && pData->MouseInput.MouseButtonReleased) {
+    pData->GridCfg.GridOrigo.x = pData->MousePosEng.x;
+    pData->GridCfg.GridOrigo.y = pData->MousePosEng.y;
+    pData->GridCfg = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
   }
 
   return InputChanged;
@@ -539,14 +576,14 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
 
   {
     ldaDrawText(pData->MhE2P,
-                es::Point(pData->GridCfg.GridCentre.x -
+                es::Point(pData->GridCfg.GridScreenCentre.x -
                               pData->GridCfg.GridDimensions.x / 2.f,
                           -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f),
                           0.f),
                 pData->WikipediaLink);
 
     auto const BoxPosition =
-        es::Point(pData->GridCfg.GridCentre.x -
+        es::Point(pData->GridCfg.GridScreenCentre.x -
                       21.f * pData->GridCfg.GridDimensions.x / 40.f,
                   -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f), 0.f);
     auto const BoxDimension =
@@ -578,7 +615,7 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
   auto const Frequency = 2.0;
   auto const Omegat = M_2_PI * Frequency * pData->t;
   auto const Radius = 4.f / M_PI;
-  auto Centre = es::Point(pData->GridCfg.GridCentre.x -
+  auto Centre = es::Point(pData->GridCfg.GridScreenCentre.x -
                               pData->GridCfg.GridDimensions.x / 2.f - Radius,
                           0.f, 0.f);
 
@@ -610,7 +647,7 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
   // NOTE: Reset X value axis plots
   // ---
   auto const GridRight =
-      pData->GridCfg.GridCentre.x + pData->GridCfg.GridDimensions.x / 2.f;
+      pData->GridCfg.GridScreenCentre.x + pData->GridCfg.GridDimensions.x / 2.f;
 
   if (pData->Xcalc > GridRight) {
     auto const GridLeft = -GridRight;
@@ -645,6 +682,105 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
 }
 
 /**
+ * Draw a Fractal.
+ */
+auto UpdateDrawFrameFractal(data *pData) -> void {
+
+  if (data::pages::PageFractal != pData->PageNum) {
+    pData->WikipediaLink = "https://en.wikipedia.org/wiki/Fractal";
+    pData->PageNum = data::pages::PageFractal;
+  }
+
+  BeginDrawing();
+  ClearBackground(RAYWHITE);
+
+  DrawText(std::string("Num terms: " + std::to_string(pData->n) +
+                       ". Key:" + std::to_string(pData->KeyPrv) +
+                       ". Time:" + std::to_string(pData->Xcalc))
+               .c_str(),
+           140, 40, 20, BLUE);
+
+  {
+    ldaDrawText(pData->MhE2P,
+                es::Point(pData->GridCfg.GridScreenCentre.x -
+                              pData->GridCfg.GridDimensions.x / 2.f,
+                          -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f),
+                          0.f),
+                pData->WikipediaLink);
+
+    auto const BoxPosition =
+        es::Point(pData->GridCfg.GridScreenCentre.x -
+                      21.f * pData->GridCfg.GridDimensions.x / 40.f,
+                  -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f), 0.f);
+    auto const BoxDimension =
+        es::Vector(5.f / 8.f * pData->GridCfg.GridDimensions.x,
+                   pData->GridCfg.GridDimensions.y / 15.f, 0.f);
+
+    if (pData->MousePosEng.x > BoxPosition.x &&
+        pData->MousePosEng.x < (BoxPosition.x + BoxDimension.x) &&
+        pData->MousePosEng.y > BoxPosition.y &&
+        pData->MousePosEng.y < (BoxPosition.y + BoxDimension.y)) {
+
+      ldaDrawBox(pData->MhE2P, BoxPosition, BoxDimension);
+    }
+  }
+
+  // ---
+  // NOTE: Get mouse click position inside the grid to move center to
+  //       the point that was clicked.
+  // ---
+  {
+    auto const &GridC = pData->GridCfg.GridScreenCentre;
+    auto const &GridD = pData->GridCfg.GridDimensions;
+    auto const GridP = GridC - GridD * (1.f / 2.f);
+
+    ldaDrawBox(pData->MhE2P,
+               es::Point(pData->MousePosEng.x, pData->MousePosEng.y, 0.f),
+               GridD, RED);
+
+    if (pData->MousePosEng.x > (GridP.x) &&
+        pData->MousePosEng.x < (GridP.x + GridD.x) &&
+        pData->MousePosEng.y > (GridP.y) &&
+        pData->MousePosEng.y < (GridP.y + GridD.y)) {
+
+      ldaDrawBox(pData->MhE2P, GridP, GridD, ORANGE);
+
+      if (pData->MouseInput.MouseButtonReleased) {
+        pData->GridCfg.GridOrigo =
+            pData->GridCfg.GridOrigo + pData->MousePosEng;
+        pData->GridCfg = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
+        // pData->MhG2E = es::SetTranslation(pData->MousePosEng);
+        // pData->MhG2EInv = MatrixInvert(pData->MhG2E);
+
+        std::cout << "MousePosEng: " << pData->MousePosEng << std::endl;
+        std::cout << "GridOrigo  : " << pData->GridCfg.GridOrigo << std::endl;
+
+        std::cout << pData->MhG2E;
+        std::cout << pData->MhG2EInv << std::endl;
+        std::cout << pData->MhG2E * pData->MhG2EInv << std::endl;
+      }
+    }
+  }
+
+  HandleInput(pData);
+
+  // ---
+  // NOTE: Draw the grid.
+  // ---
+  if (pData->ShowGrid) {
+    ldaShowGrid(pData);
+  }
+
+  EndDrawing();
+
+  if (pData->TakeScreenshot) {
+    pData->TakeScreenshot = false;
+    auto const FileName = std::string(__FUNCTION__) + ".png";
+    TakeScreenshot(FileName.c_str());
+  }
+}
+
+/**
  * Draw an animation of the Asteroid parametric equation.
  * link: https://en.wikipedia.org/wiki/Astroid
  */
@@ -664,16 +800,17 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
            140, 40, 20, BLUE);
 
   {
-    auto const PosTxt = es::Point(
-        pData->GridCfg.GridCentre.x - pData->GridCfg.GridDimensions.x / 2.f,
-        -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f), 0.f);
+    auto const PosTxt =
+        es::Point(pData->GridCfg.GridScreenCentre.x -
+                      pData->GridCfg.GridDimensions.x / 2.f,
+                  -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f), 0.f);
 
     ldaDrawText(pData->MhE2P, PosTxt, pData->WikipediaLink, 20, GREEN, 0.7f,
                 0.05f);
 
     {
       auto const BoxPosition =
-          es::Point(pData->GridCfg.GridCentre.x -
+          es::Point(pData->GridCfg.GridScreenCentre.x -
                         21.f * pData->GridCfg.GridDimensions.x / 40.f,
                     -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f), 0.f);
       auto const BoxDimension =
@@ -860,7 +997,9 @@ auto main(int argc, char const *argv[]) -> int {
   Data.vHelpTextPage.push_back("F2 - ScreenShot");
   Data.vHelpTextPage.push_back("a -  Asteriode");
   Data.vHelpTextPage.push_back("f -  Fourier square wave");
-  Data.vHelpTextPage.push_back("l -  Open current page's web link");
+  Data.vHelpTextPage.push_back("g -  toggle Grid");
+  Data.vHelpTextPage.push_back("l -  open current page's web Link");
+  Data.vHelpTextPage.push_back("r -  fRactal");
 
   // ---
   SetTargetFPS(60); // Set our game to run at X frames-per-second
@@ -883,6 +1022,12 @@ auto main(int argc, char const *argv[]) -> int {
   Data.MhE2P = InitEng2PixelMatrix(
       Data.vEngOffset, Data.vPixelsPerUnit,
       {Data.screenWidth / 2.f, Data.screenHeight / 2.f, 0.f, 0.f});
+
+  Data.MhG2E = es::SetTranslation(es::Vector(0.f, 0.f, 0.f));
+  Data.MhG2EInv = MatrixInvert(Data.MhG2E);
+  std::cout << Data.MhG2E;
+  std::cout << Data.MhG2EInv << std::endl;
+  std::cout << Data.MhG2E * Data.MhG2EInv << std::endl;
 
   if (es::IsMatrixInvertible(Data.MhE2P)) {
     Data.MhE2PInv = MatrixInvert(Data.MhE2P);
@@ -907,7 +1052,7 @@ auto main(int argc, char const *argv[]) -> int {
   // ---
   // NOTE: Construct the grid pattern.
   // ---
-  Data.GridCfg = GridCfgInPixels(Data.MhE2P);
+  Data.GridCfg = GridCfgInPixels(Data.MhE2P, Data.GridCfg);
 
   Data.UpdateDrawFramePointer = UpdateDrawFrameHelp;
 
