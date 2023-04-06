@@ -111,6 +111,7 @@ struct data {
   Vector4 vPixelsPerUnit{100.f, 100.f, 100.f, 0.f};
 
   Vector4 MousePosEng{};
+  Vector4 MousePosGrid{};
   struct mouse_input {
     bool MouseButtonPressed{};
     bool MouseButtonDown{};
@@ -455,6 +456,13 @@ auto HandleInput(data *pData) -> bool {
 
   auto const MousePos = GetMousePosition();
   pData->MousePosEng = pData->MhE2PInv * es::Point(MousePos.x, MousePos.y, 0.f);
+  pData->MousePosGrid = pData->MhG2E * pData->MousePosEng;
+  ldaDrawText(
+      pData->MhE2P, es::Point(0.f, -1.f, 0.f),
+      std::string("MousePosGrid:" + std::to_string(pData->MousePosGrid.x) +
+                  " " + std::to_string(pData->MousePosGrid.y))
+          .c_str());
+
   pData->MouseInput.MouseButtonUp = IsMouseButtonUp(0);
   pData->MouseInput.MouseButtonDown = IsMouseButtonDown(0);
   pData->MouseInput.MouseButtonPressed = IsMouseButtonPressed(0);
@@ -753,15 +761,8 @@ auto UpdateDrawFrameFractal(data *pData) -> void {
         pData->GridCfg.GridOrigo =
             pData->GridCfg.GridOrigo + pData->MousePosEng;
         pData->GridCfg = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
-        // pData->MhG2E = es::SetTranslation(pData->MousePosEng);
-        // pData->MhG2EInv = MatrixInvert(pData->MhG2E);
-
-        std::cout << "MousePosEng: " << pData->MousePosEng << std::endl;
-        std::cout << "GridOrigo  : " << pData->GridCfg.GridOrigo << std::endl;
-
-        std::cout << pData->MhG2E;
-        std::cout << pData->MhG2EInv << std::endl;
-        std::cout << pData->MhG2E * pData->MhG2EInv << std::endl;
+        pData->MhG2E = es::SetTranslation(pData->MousePosGrid);
+        pData->MhG2EInv = MatrixInvert(pData->MhG2E);
       }
     }
   }
