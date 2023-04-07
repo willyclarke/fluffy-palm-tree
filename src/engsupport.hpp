@@ -97,6 +97,8 @@ Vector4 Lerp(Vector4 const &A, Vector4 const &B, float t);
 //------------------------------------------------------------------------------
 Matrix Mul(Matrix const &M1, Matrix const &M2);
 
+//------------------------------------------------------------------------------
+void Assert(bool Condition, char const *pCaller, int Line = 0);
 }; // namespace es
 
 Matrix operator*(Matrix const &M1, Matrix const &M2);

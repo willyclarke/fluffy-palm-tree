@@ -21,6 +21,16 @@
  */
 namespace es // aka engineering support
 {
+
+/**
+ * Cause a crash when condition is false.
+ */
+void Assert(bool Condition, char const *pCaller, int Line) {
+  if (!Condition) {
+    char *pChar = nullptr;
+    *pChar = 't';
+  }
+}
 /**
  * Identity matrix 4x4
  */
