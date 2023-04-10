@@ -484,7 +484,8 @@ auto HandleInput(data* pData) -> bool {
   pData->MousePosGrid = pData->MhG2E * pData->MousePosEng;
   ldaDrawText(
       pData->MhE2P,
-      es::Point(0.f, -1.f, 0.f),
+      (pData->GridCfg.GridOrigo +
+       es::Vector(pData->GridCfg.GridDimensions.x * 0.1f, pData->GridCfg.GridDimensions.y * 0.1f, 0.f)),
       std::string("MousePosGrid:" + std::to_string(pData->MousePosGrid.x) + " " + std::to_string(pData->MousePosGrid.y))
           .c_str());
 
@@ -535,8 +536,15 @@ auto HandleInput(data* pData) -> bool {
       ++pData->n;
       InputChanged = true;
     } else if (KEY_SPACE == pData->Key) {
-      InputChanged      = true;
-      pData->StopUpdate = !pData->StopUpdate;
+      if (data::pages::PageFractal == pData->PageNum) {
+        auto& vPPU = pData->vPixelsPerUnit;
+        vPPU.x     = std::max(100.f, MinPixelPerUnit);
+        vPPU.y     = std::max(100.f, MinPixelPerUnit);
+        vPPU.z     = std::max(100.f, MinPixelPerUnit);
+      } else {
+        pData->StopUpdate = !pData->StopUpdate;
+      }
+      InputChanged = true;
     } else if (KEY_A == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameAsteroid;
       InputChanged                  = true;
@@ -754,15 +762,7 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
                      Ev.Col.a);
       }
     }
-    // for (auto const &E : pData->FractalConfig.vFractalPixels) {
-    //   auto Col = E.Col;
-    //   // Col.r = E.Col.a;
-    //   // Col.g = E.Col.a;
-    //   // Col.b = E.Col.a;
-    //   ldaDrawPixel(pData->MhE2P, pData->MhG2EInv * E.Pos,
-    //                {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f}, NoPrint,
-    //                Col, E.Col.a);
-    // }
+
     ldaDrawText(pData->MhE2P,
                 es::Point(pData->GridCfg.GridScreenCentre.x - pData->GridCfg.GridDimensions.x / 2.f,
                           -(pData->GridCfg.GridDimensions.y / 2.f * 0.85f),
@@ -790,9 +790,6 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
 
       ldaDrawBox(pData->MhE2P, BoxPosition, BoxDimension);
 
-      ldaDrawLine(pData->MhE2P, es::Point(-1.f, 0.f, 0.f), es::Point(-1.f, 2.f, 0.f));
-      ldaDrawLine(pData->MhE2P, es::Point(-1.01f, 0.f, 0.f), es::Point(-1.01f, 2.f, 0.f));
-
       if (pData->MouseInput.MouseButtonReleased)
         if (!pData->WikipediaLink.empty())
           OpenURL(pData->WikipediaLink.c_str());
@@ -808,14 +805,12 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
     auto const& GridD = pData->GridCfg.GridDimensions;
     auto const  GridP = GridC - GridD * (1.f / 2.f);
 
-    // ldaDrawBox(pData->MhE2P,
-    //            es::Point(pData->MousePosEng.x, pData->MousePosEng.y, 0.f),
-    //            GridD, RED);
+    // ldaDrawBox(pData->MhE2P, es::Point(pData->MousePosEng.x, pData->MousePosEng.y, 0.f), GridD, RED);
 
     if (pData->MousePosEng.x > (GridP.x) && pData->MousePosEng.x < (GridP.x + GridD.x) &&
         pData->MousePosEng.y > (GridP.y) && pData->MousePosEng.y < (GridP.y + GridD.y)) {
 
-      // ldaDrawBox(pData->MhE2P, GridP, GridD, ORANGE);
+      ldaDrawBox(pData->MhE2P, GridP, GridD, ORANGE);
 
       if (pData->MouseInput.MouseButtonReleased) {
         pData->GridCfg.GridOrigo = pData->GridCfg.GridOrigo + pData->MousePosEng;
@@ -827,29 +822,6 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
   }
 
   HandleInput(pData);
-
-  {
-    // ---
-    // NOTE: Add elements to be drawn.
-    // ---
-    // std::scoped_lock lock(pData->MutTrendPoints);
-    // if (pData->NumTrendPoints > 40000) {
-    //   pData->NumTrendPoints = 0;
-    //   pData->CurrentTrendPoint = 0;
-    // }
-    //
-    // pData->vTrendPoints[pData->CurrentTrendPoint] = pData->MousePosGrid;
-    // ++pData->CurrentTrendPoint;
-
-    // ---
-    // NOTE: Draw the points of the fractal.
-    // ---
-    // for (size_t Idx = 0;
-    //      Idx < std::min(pData->vTrendPoints.size(), size_t(40000)); ++Idx) {
-    //   ldaDrawPixel(pData->MhE2P, pData->MhG2EInv * pData->vTrendPoints[Idx],
-    //                {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f});
-    // }
-  }
 
   // ---
   // NOTE: Draw the grid.
