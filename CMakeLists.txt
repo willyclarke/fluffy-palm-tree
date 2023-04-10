@@ -29,8 +29,17 @@ endif()
 
 # Our Project
 set(SRC "src")
+
+set(CURVESSRC
+  ${SRC}/curvesrobotics.cpp
+  ${SRC}/engsupport.cpp
+  ${SRC}/fractal.cpp
+  )
+
 add_executable("${PROJECT_NAME}fourier" ${SRC}/fourierwraylib.cpp ${SRC}/engsupport.cpp)
-add_executable("${PROJECT_NAME}curves" ${SRC}/curvesrobotics.cpp ${SRC}/engsupport.cpp)
+
+add_executable("${PROJECT_NAME}curves" ${CURVESSRC})
+
 #set(raylib_VERBOSE 1)
 target_link_libraries("${PROJECT_NAME}fourier" raylib)
 target_link_libraries("${PROJECT_NAME}curves" raylib)
@@ -44,7 +53,7 @@ endif()
 # Checks if OSX and links appropriate frameworks (Only required on MacOS)
 if (APPLE)
   set(PROJECT_CURVES_OSX "${PROJECT_NAME}curvesosx")
-  add_executable(${PROJECT_CURVES_OSX} MACOSX_BUNDLE ${SRC}/curvesrobotics.cpp ${SRC}/engsupport.cpp)
+  add_executable(${PROJECT_CURVES_OSX} MACOSX_BUNDLE ${CURVESSRC})
 
   get_target_property(MY_RAYLIB_INCLUDES raylib INCLUDE_DIRECTORIES)
   foreach(dir ${MY_RAYLIB_INCLUDES})
