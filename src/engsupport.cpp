@@ -27,10 +27,11 @@ namespace es // aka engineering support
  */
 void Assert(bool Condition, char const *pCaller, int Line) {
   if (!Condition) {
-    char *pChar = nullptr;
+    volatile char *pChar = nullptr;
     *pChar = 't';
   }
 }
+
 /**
  * Identity matrix 4x4
  */
@@ -158,7 +159,7 @@ float Mul(Vector4 const &V1, Vector4 const &V2) {
 /**
  */
 Vector4 Mul(Vector4 const &V1, float c) {
-  Vector4 const Result{V1.x * c, V1.y * c, V1.y * c, V1.w * c};
+  Vector4 const Result{V1.x * c, V1.y * c, V1.z * c, V1.w * c};
   return Result;
 }
 
