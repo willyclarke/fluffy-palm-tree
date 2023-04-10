@@ -1359,8 +1359,8 @@ auto main(int argc, char const* argv[]) -> int {
 
     TraceLog(LOG_INFO,
              "Pixel Pos %i:%i is mapped from engineering Pos %f:%f",
-             OrigoScreenInPixels.x,
-             OrigoScreenInPixels.y,
+             int(OrigoScreenInPixels.x),
+             int(OrigoScreenInPixels.y),
              EngPos.x,
              EngPos.y);
 
