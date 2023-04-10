@@ -1,4 +1,3 @@
-
 /*******************************************************************************************
  * Famous Curves for Robotics in C++
  *
@@ -34,20 +33,20 @@ namespace fluffy {
 namespace fractal {
 struct pixel {
   Vector4 Pos{0.f, 0.f, 0.f, 1.f}; //!< Make it a point.
-  Color Col{BLACK};
+  Color   Col{BLACK};
 };
 
 struct config {
-  Vector4 Constant{-0.4f, 0.6f, 0.f, 0.f};
-  Vector4 Dimension{2.f, 2.f, 0.f, 0.f};
-  std::vector<fluffy::fractal::pixel> vFractalPixels{};
+  Vector4                                          Constant{-0.4f, 0.6f, 0.f, 0.f};
+  Vector4                                          Dimension{2.f, 2.f, 0.f, 0.f};
+  std::vector<fluffy::fractal::pixel>              vFractalPixels{};
   std::vector<std::vector<fluffy::fractal::pixel>> vvFractalPixels{};
 };
 
 /**
  * Compute Zn^2 + C
  */
-auto ComputeNext(Vector4 const &Current, Vector4 const &Constant) -> Vector4 {
+auto ComputeNext(Vector4 const& Current, Vector4 const& Constant) -> Vector4 {
 
   // Zn^2
   auto const Zr = Current.x * Current.x - Current.y * Current.y;
@@ -60,13 +59,12 @@ auto ComputeNext(Vector4 const &Current, Vector4 const &Constant) -> Vector4 {
 /**
  * Return the mod squared.
  */
-auto Mod2(Vector4 const &Z) -> float { return Z.x * Z.x + Z.y * Z.y; }
+auto Mod2(Vector4 const& Z) -> float { return Z.x * Z.x + Z.y * Z.y; }
 
 /**
  * Compute sequence elements until Mod exceeds threshold or max iterations.
  */
-auto ComputeIterations(Vector4 const &Z0, Vector4 const &Constant,
-                       int MaxIterations = 50) -> float {
+auto ComputeIterations(Vector4 const& Z0, Vector4 const& Constant, int MaxIterations = 50) -> float {
   auto Zn = Z0;
   auto Iteration{0};
   while (Mod2(Zn) < 4.f && Iteration < MaxIterations) {
@@ -75,9 +73,8 @@ auto ComputeIterations(Vector4 const &Z0, Vector4 const &Constant,
   }
 
   // Create a smooth iteration count.
-  auto const Mod = std::sqrtf(Mod2(Zn));
-  auto const SmoothIteration =
-      float(Iteration) - std::log2f(std::max(1.f, std::log2f(Mod)));
+  auto const Mod             = std::sqrtf(Mod2(Zn));
+  auto const SmoothIteration = float(Iteration) - std::log2f(std::max(1.f, std::log2f(Mod)));
   // std::cout << "SmoothIteration:" << SmoothIteration
   //           << ". Iteration:" << Iteration << Z0 << " " << Zn << std::endl;
 
@@ -114,19 +111,16 @@ auto Render(Vector4 const &RenderSize, Vector4 const &Constant) -> void {
  * TODO: (Willy Clarke) : Get hold of the pixelsize and set the increment
  * accordingly.
  */
-auto CreateFractalVector(Vector4 const &RenderSize, Vector4 const &Constant,
-                         Vector4 const &Resolution) -> fluffy::fractal::config {
+auto CreateFractalVector(Vector4 const& RenderSize, Vector4 const& Constant, Vector4 const& Resolution)
+    -> fluffy::fractal::config {
 
-  auto ldaSetPixelColor = [](Vector4 const &Pos, int Iterations,
-                             int MaxIterations) -> fluffy::fractal::pixel {
+  auto ldaSetPixelColor = [](Vector4 const& Pos, int Iterations, int MaxIterations) -> fluffy::fractal::pixel {
     fluffy::fractal::pixel Result{};
-    Result.Pos = Pos;
+    Result.Pos   = Pos;
     Result.Col.r = 0xFF & Iterations;
     Result.Col.g = 0xFF & (Iterations >> 8);
     Result.Col.b = 0xFF & (Iterations >> 16);
-    Result.Col.a =
-        0xFF &
-        int(255.f - float(255.f * float(Iterations) / float(MaxIterations)));
+    Result.Col.a = 0xFF & int(255.f - float(255.f * float(Iterations) / float(MaxIterations)));
 
     return Result;
   };
@@ -136,22 +130,21 @@ auto CreateFractalVector(Vector4 const &RenderSize, Vector4 const &Constant,
   std::mutex io_mutex;
 
   struct box {
-    size_t Idx{0xFFFF};
+    size_t  Idx{0xFFFF};
     Vector4 LowerLeft{};
     Vector4 UpperRigth{};
   };
 
   auto ldaCreateFractalJuliaSet =
       [&ldaSetPixelColor, &io_mutex](
-          box const &Box, Vector4 const &Resolution,
-          Vector4 const &Constant) -> std::vector<fluffy::fractal::pixel> {
+          box const& Box, Vector4 const& Resolution, Vector4 const& Constant) -> std::vector<fluffy::fractal::pixel> {
     std::vector<fluffy::fractal::pixel> vPixelCfg{};
 
     auto const IncrementX = 1.f / Resolution.x;
     auto const IncrementY = 1.f / Resolution.y;
-    auto X = Box.LowerLeft.x;
-    auto Y = Box.LowerLeft.y;
-    auto MaxRegisteredIterations{0.f};
+    auto       X          = Box.LowerLeft.x;
+    auto       Y          = Box.LowerLeft.y;
+    auto       MaxRegisteredIterations{0.f};
 
     while (Y < Box.UpperRigth.y) {
       while (X < Box.UpperRigth.x) {
@@ -160,7 +153,7 @@ auto CreateFractalVector(Vector4 const &RenderSize, Vector4 const &Constant,
 
         // Compute the pixel color.
         auto constexpr MaxIterations = 500;
-        auto const Iterations = ComputeIterations(Pos, Constant, MaxIterations);
+        auto const Iterations        = ComputeIterations(Pos, Constant, MaxIterations);
         vPixelCfg.push_back(ldaSetPixelColor(Pos, Iterations, MaxIterations));
         MaxRegisteredIterations = std::max(MaxRegisteredIterations, Iterations);
 
@@ -194,13 +187,11 @@ auto CreateFractalVector(Vector4 const &RenderSize, Vector4 const &Constant,
   // NOTE: Set up Nthreads and give a block of the fractal to compute per.
   // available thread.
   // ---
-  auto const Nthreads =
-      std::max<unsigned int>(std::thread::hardware_concurrency(), 1);
+  auto const Nthreads = std::max<unsigned int>(std::thread::hardware_concurrency(), 1);
 
   auto const NumBlocksX = 1;
   auto const NumBlocksY = Nthreads;
-  auto const BlockSize =
-      es::Vector(RenderSize.x / NumBlocksX, RenderSize.y / NumBlocksY, 0.f);
+  auto const BlockSize  = es::Vector(RenderSize.x / NumBlocksX, RenderSize.y / NumBlocksY, 0.f);
 
   std::vector<box> vBox{};
 
@@ -212,10 +203,9 @@ auto CreateFractalVector(Vector4 const &RenderSize, Vector4 const &Constant,
          ++Idx) {
 
       box Box{};
-      Box.LowerLeft =
-          Start + es::Vector(Idx * BlockSize.x, Jdx * BlockSize.y, 0.f);
+      Box.LowerLeft  = Start + es::Vector(Idx * BlockSize.x, Jdx * BlockSize.y, 0.f);
       Box.UpperRigth = Box.LowerLeft + BlockSize;
-      Box.Idx = vBox.size();
+      Box.Idx        = vBox.size();
       vBox.push_back(Box);
     }
   }
@@ -232,11 +222,10 @@ auto CreateFractalVector(Vector4 const &RenderSize, Vector4 const &Constant,
        Idx < vBox.size(); //!<
        ++Idx) {
 
-    auto const &Box = vBox.at(Idx);
+    auto const& Box = vBox.at(Idx);
 
-    auto ldaT = [&vvPixel, ldaCreateFractalJuliaSet,
-                 &io_mutex](box const &Box, Vector4 const &Resolution,
-                            Vector4 const &Constant) -> void {
+    auto ldaT = [&vvPixel, ldaCreateFractalJuliaSet, &io_mutex](
+                    box const& Box, Vector4 const& Resolution, Vector4 const& Constant) -> void {
       std::vector<fluffy::fractal::pixel> vPixel{};
       vPixel = ldaCreateFractalJuliaSet(Box, Resolution, Constant);
       {
@@ -258,7 +247,7 @@ auto CreateFractalVector(Vector4 const &RenderSize, Vector4 const &Constant,
   }
 
   fluffy::fractal::config Config{Constant, RenderSize};
-  Config.vFractalPixels = vPixel;
+  Config.vFractalPixels  = vPixel;
   Config.vvFractalPixels = vvPixel;
 
 #if 0
@@ -288,9 +277,9 @@ namespace {
  * Hold pixel position as integers, X and Y.
  */
 struct pixel_pos {
-  int X{};
-  int Y{};
-  Color color{LIGHTGRAY};
+  int         X{};
+  int         Y{};
+  Color       color{LIGHTGRAY};
   std::string TxtTagX{}; //!< Text for x markers
   std::string TxtTagY{}; //!< Text for y markers
 };
@@ -326,31 +315,31 @@ struct grid_cfg {
 struct data {
 
   // Declare the function pointer
-  auto(*UpdateDrawFramePointer)(data *) -> void;
+  auto(*UpdateDrawFramePointer)(data*) -> void;
   std::vector<std::string> vHelpTextPage{};
-  std::string WikipediaLink{};
+  std::string              WikipediaLink{};
 
-  int screenWidth = 1280;
+  int screenWidth  = 1280;
   int screenHeight = 768;
 
   enum class pages { PageAsteroid, PageFourier, PageFractal, PageHelp };
   pages PageNum{};
 
-  int Key{};
-  int KeyPrv{};
-  bool TakeScreenshot{};
-  bool StopUpdate{};
-  bool ShowGrid{true};
+  int   Key{};
+  int   KeyPrv{};
+  bool  TakeScreenshot{};
+  bool  StopUpdate{};
+  bool  ShowGrid{true};
   float Xcalc{};
-  int n{5}; //!< Fourier series number of terms.
+  int   n{5}; //!< Fourier series number of terms.
   float dt{};
   float t{};
 
-  std::mutex MutTrendPoints{};
+  std::mutex           MutTrendPoints{};
   std::vector<Vector4> vTrendPoints{};
-  size_t CurrentTrendPoint{};
-  size_t NumTrendPoints{};
-  grid_cfg GridCfg{};
+  size_t               CurrentTrendPoint{};
+  size_t               NumTrendPoints{};
+  grid_cfg             GridCfg{};
 
   fluffy::fractal::config FractalConfig{};
 
@@ -384,15 +373,13 @@ struct data {
  * Return vector containing the absolute value of the elements on the diagonal
  * of a Matrix. Can be used for pulling out resolution.
  */
-auto DiagVector(Matrix const &MhE2P) -> Vector4 {
-  return es::Vector(MhE2P.m0, MhE2P.m5, MhE2P.m10);
-}
+auto DiagVector(Matrix const& MhE2P) -> Vector4 { return es::Vector(MhE2P.m0, MhE2P.m5, MhE2P.m10); }
 
 /**
  * Return vector containing the absolute value of the elements on the diagonal
  * of a Matrix. Can be used for pulling out resolution.
  */
-auto DiagVectorAbs(Matrix const &MhE2P) -> Vector4 {
+auto DiagVectorAbs(Matrix const& MhE2P) -> Vector4 {
   auto D = DiagVector(MhE2P);
   return es::Vector(std::abs(D.x), std::abs(D.y), std::abs(D.z));
 }
@@ -400,20 +387,20 @@ auto DiagVectorAbs(Matrix const &MhE2P) -> Vector4 {
 /*
  * Create lines and ticks for a grid in engineering units.
  */
-auto GridCfgInPixels(Matrix const &MhE2P, //!< Homogenous matrix from
-                     grid_cfg const &GridCfg) -> grid_cfg {
+auto GridCfgInPixels(Matrix const&   MhE2P, //!< Homogenous matrix from
+                     grid_cfg const& GridCfg) -> grid_cfg {
 
   auto Result = GridCfg;
   Result.vGridLines.clear();
   Result.vGridSubDivider.clear();
 
-  auto const GridLength = GridCfg.GridDimensions.x;
-  auto const GridHeight = GridCfg.GridDimensions.y;
+  auto const GridLength        = GridCfg.GridDimensions.x;
+  auto const GridHeight        = GridCfg.GridDimensions.y;
   auto const GridScreenXCentre = GridCfg.GridScreenCentre.x;
   auto const GridScreenYCentre = GridCfg.GridScreenCentre.y;
-  auto const GridOrigoX = GridCfg.GridOrigo.x;
-  auto const GridOrigoY = GridCfg.GridOrigo.y;
-  auto TickDistance = GridCfg.TickDistance;
+  auto const GridOrigoX        = GridCfg.GridOrigo.x;
+  auto const GridOrigoY        = GridCfg.GridOrigo.y;
+  auto       TickDistance      = GridCfg.TickDistance;
 
   auto const GridXLowerLeft = GridScreenXCentre - GridLength / 2.f;
   auto const GridYLowerLeft = GridScreenYCentre - GridHeight / 2.f;
@@ -425,42 +412,40 @@ auto GridCfgInPixels(Matrix const &MhE2P, //!< Homogenous matrix from
     float fromY{};
     float toX{};
     float toY{};
-    bool TagX{};
-    bool TagY{};
+    bool  TagX{};
+    bool  TagY{};
   };
 
-  const float NumTicksX = GridLength / TickDistance;
-  const float NumTicksY = GridHeight / TickDistance;
+  const float             NumTicksX = GridLength / TickDistance;
+  const float             NumTicksY = GridHeight / TickDistance;
   std::vector<grid_point> vGridPoint{};
   std::vector<grid_point> vGridSubDivider{};
 
   //!< Vertical left
-  vGridPoint.push_back(grid_point{GridXLowerLeft, GridYLowerLeft,
-                                  GridXLowerLeft, GridYLowerLeft + GridHeight});
+  vGridPoint.push_back(grid_point{GridXLowerLeft, GridYLowerLeft, GridXLowerLeft, GridYLowerLeft + GridHeight});
 
   //!< Horizontal lower
-  vGridPoint.push_back(grid_point{GridXLowerLeft, GridYLowerLeft,
-                                  GridXLowerLeft + GridLength, GridYLowerLeft});
+  vGridPoint.push_back(grid_point{GridXLowerLeft, GridYLowerLeft, GridXLowerLeft + GridLength, GridYLowerLeft});
 
   //!< Vertical rigth
-  vGridPoint.push_back(grid_point{GridXLowerLeft + GridLength, GridYLowerLeft,
-                                  GridXLowerLeft + GridLength,
-                                  GridYLowerLeft + GridHeight});
+  vGridPoint.push_back(grid_point{
+      GridXLowerLeft + GridLength, GridYLowerLeft, GridXLowerLeft + GridLength, GridYLowerLeft + GridHeight});
 
   //!< Horizontal upper
-  vGridPoint.push_back(grid_point{GridXLowerLeft, GridYLowerLeft + GridHeight,
-                                  GridXLowerLeft + GridLength,
-                                  GridYLowerLeft + GridHeight});
+  vGridPoint.push_back(grid_point{
+      GridXLowerLeft, GridYLowerLeft + GridHeight, GridXLowerLeft + GridLength, GridYLowerLeft + GridHeight});
 
   //!< Center Horizontal
-  vGridPoint.push_back(grid_point{
-      GridXLowerLeft, GridYLowerLeft + (GridHeight / 2.f),
-      GridXLowerLeft + GridLength, GridYLowerLeft + (GridHeight / 2.f)});
+  vGridPoint.push_back(grid_point{GridXLowerLeft,
+                                  GridYLowerLeft + (GridHeight / 2.f),
+                                  GridXLowerLeft + GridLength,
+                                  GridYLowerLeft + (GridHeight / 2.f)});
 
   //!< Center Vertical
-  vGridPoint.push_back(grid_point{
-      GridXLowerLeft + GridLength / 2.f, GridYLowerLeft,
-      GridXLowerLeft + GridLength / 2.f, GridYLowerLeft + GridHeight});
+  vGridPoint.push_back(grid_point{GridXLowerLeft + GridLength / 2.f,
+                                  GridYLowerLeft,
+                                  GridXLowerLeft + GridLength / 2.f,
+                                  GridYLowerLeft + GridHeight});
 
   // ---
   // NOTE: Create ticks along the horizontal axis.
@@ -484,8 +469,7 @@ auto GridCfgInPixels(Matrix const &MhE2P, //!< Homogenous matrix from
     if (Idx && !(Idx % 5)) {
       auto const PosSudividerY0 = GridYLowerLeft;
       auto const PosSudividerY1 = GridYLowerLeft + GridHeight;
-      vGridSubDivider.push_back(
-          grid_point{PosX0, PosSudividerY0, PosX1, PosSudividerY1});
+      vGridSubDivider.push_back(grid_point{PosX0, PosSudividerY0, PosX1, PosSudividerY1});
     }
   }
 
@@ -512,24 +496,22 @@ auto GridCfgInPixels(Matrix const &MhE2P, //!< Homogenous matrix from
     if (Idx && !(Idx % 5)) {
       auto const PosSudividerX0 = GridXLowerLeft;
       auto const PosSudividerX1 = GridXLowerLeft + GridLength;
-      vGridSubDivider.push_back(
-          grid_point{PosSudividerX0, PosY0, PosSudividerX1, PosY1});
+      vGridSubDivider.push_back(grid_point{PosSudividerX0, PosY0, PosSudividerX1, PosY1});
     }
   }
 
   Result.GridScreenCentre.x = GridXLowerLeft + GridLength / 2.f;
   Result.GridScreenCentre.y = GridYLowerLeft + GridHeight / 2.f;
-  Result.GridDimensions.x = GridLength;
-  Result.GridDimensions.y = GridHeight;
+  Result.GridDimensions.x   = GridLength;
+  Result.GridDimensions.y   = GridHeight;
 
-  auto const MhG2E =
-      es::SetTranslation(es::Vector(GridOrigoX, GridOrigoY, 0.f));
+  auto const MhG2E = es::SetTranslation(es::Vector(GridOrigoX, GridOrigoY, 0.f));
 
   // ---
   // NOTE: Create major dividers.
   // ---
-  for (auto const &Elem : vGridPoint) {
-    auto const ToPixel = MhE2P * es::Point(Elem.toX, Elem.toY, 0.f);
+  for (auto const& Elem : vGridPoint) {
+    auto const ToPixel   = MhE2P * es::Point(Elem.toX, Elem.toY, 0.f);
     auto const FromPixel = MhE2P * es::Point(Elem.fromX, Elem.fromY, 0.f);
 
     // ---
@@ -543,8 +525,7 @@ auto GridCfgInPixels(Matrix const &MhE2P, //!< Homogenous matrix from
 
       converted_text C{};
 
-      auto const Status =
-          std::snprintf(C.Conv, sizeof(converted_text), "%.1f", In);
+      auto const Status = std::snprintf(C.Conv, sizeof(converted_text), "%.1f", In);
 
       if (Status) {
         Result = std::string(C.Conv);
@@ -555,13 +536,9 @@ auto GridCfgInPixels(Matrix const &MhE2P, //!< Homogenous matrix from
     // ---
     // NOTE: Create the axis tag based on the setup from the grid.
     // ---
-    auto const &TagX =
-        Elem.TagX ? ldaFloat2Str((MhG2E * es::Point(Elem.fromX, 0.f, 0.f)).x)
-                  : "";
-    auto const &TagY =
-        Elem.TagY ? ldaFloat2Str((MhG2E * es::Point(0.f, Elem.fromY, 0.f)).y)
-                  : "";
-    pixel_pos PixelPos = {int(ToPixel.x), int(ToPixel.y), DARKGRAY, TagX, TagY};
+    auto const& TagX     = Elem.TagX ? ldaFloat2Str((MhG2E * es::Point(Elem.fromX, 0.f, 0.f)).x) : "";
+    auto const& TagY     = Elem.TagY ? ldaFloat2Str((MhG2E * es::Point(0.f, Elem.fromY, 0.f)).y) : "";
+    pixel_pos   PixelPos = {int(ToPixel.x), int(ToPixel.y), DARKGRAY, TagX, TagY};
 
     Result.vGridLines.push_back(PixelPos);
     Result.vGridLines.push_back({int(FromPixel.x), int(FromPixel.y), DARKGRAY});
@@ -570,8 +547,8 @@ auto GridCfgInPixels(Matrix const &MhE2P, //!< Homogenous matrix from
   // ---
   // NOTE: Create the minor dividers.
   // ---
-  for (auto const &Elem : vGridSubDivider) {
-    auto const ToPixel = MhE2P * es::Point(Elem.toX, Elem.toY, 0.f);
+  for (auto const& Elem : vGridSubDivider) {
+    auto const ToPixel   = MhE2P * es::Point(Elem.toX, Elem.toY, 0.f);
     auto const FromPixel = MhE2P * es::Point(Elem.fromX, Elem.fromY, 0.f);
     Result.vGridLines.push_back({int(ToPixel.x), int(ToPixel.y)});
     Result.vGridLines.push_back({int(FromPixel.x), int(FromPixel.y)});
@@ -589,27 +566,26 @@ auto GridCfgInPixels(Matrix const &MhE2P, //!< Homogenous matrix from
  * @ScreenCenterInPixels - The coordinates for the centre of the screen in
  * pixels.
  */
-auto InitEng2PixelMatrix(Vector4 const &OrigoScreen,
-                         Vector4 const &vPixelsPerUnit,
-                         Vector4 const &ScreenPosInPixels) -> Matrix {
+auto InitEng2PixelMatrix(Vector4 const& OrigoScreen, Vector4 const& vPixelsPerUnit, Vector4 const& ScreenPosInPixels)
+    -> Matrix {
 
   // ---
   // Flip because pixel coord increases when moving down.
   // ---
-  constexpr float Flip = -1.f;
+  constexpr float Flip   = -1.f;
   constexpr float NoFlip = 1.f;
 
   // ---
   // Create a Homogenous matrix that converts from engineering unit to screen.
   // ---
   auto Hes = es::I();
-  Hes.m12 = ScreenPosInPixels.x + OrigoScreen.x * vPixelsPerUnit.x;
-  Hes.m13 = ScreenPosInPixels.y + OrigoScreen.y * vPixelsPerUnit.y;
-  Hes.m14 = ScreenPosInPixels.z + OrigoScreen.z * vPixelsPerUnit.z;
+  Hes.m12  = ScreenPosInPixels.x + OrigoScreen.x * vPixelsPerUnit.x;
+  Hes.m13  = ScreenPosInPixels.y + OrigoScreen.y * vPixelsPerUnit.y;
+  Hes.m14  = ScreenPosInPixels.z + OrigoScreen.z * vPixelsPerUnit.z;
 
   // Flip and scale to pixel value.
-  Hes.m0 = NoFlip * vPixelsPerUnit.x;
-  Hes.m5 = Flip * vPixelsPerUnit.y;
+  Hes.m0  = NoFlip * vPixelsPerUnit.x;
+  Hes.m5  = Flip * vPixelsPerUnit.y;
   Hes.m10 = NoFlip * vPixelsPerUnit.z;
 
   return Hes;
@@ -621,14 +597,13 @@ auto InitEng2PixelMatrix(Vector4 const &OrigoScreen,
 // @Pos - Lower Left X, Lower Left Y
 // @Dim - Length, Height
 // ---
-auto ldaDrawBox = [](Matrix const &MhE2P, Vector4 const &Pos,
-                     Vector4 const &Dim, Color Col = BLUE,
-                     float Alpha = 1.f) -> void {
+auto ldaDrawBox =
+    [](Matrix const& MhE2P, Vector4 const& Pos, Vector4 const& Dim, Color Col = BLUE, float Alpha = 1.f) -> void {
   Color C = Col;
-  C.a = 0xFF & int(float(int(Col.a) * Alpha * 255.f / 255.f));
+  C.a     = 0xFF & int(float(int(Col.a) * Alpha * 255.f / 255.f));
 
   auto const PixPosStrt = MhE2P * Pos;
-  auto const PixPosEnd = MhE2P * (Pos + Dim);
+  auto const PixPosEnd  = MhE2P * (Pos + Dim);
   // DrawLine(PixPosStrt.x, PixPosStrt.y, 0, 0, VIOLET); //!< Debug help line.
   // DrawLine(PixPosEnd.x, PixPosEnd.y, 0, 0, ORANGE);   //!< Debug help line.
   DrawLine(PixPosStrt.x, PixPosStrt.y, PixPosEnd.x, PixPosStrt.y, C);
@@ -640,10 +615,13 @@ auto ldaDrawBox = [](Matrix const &MhE2P, Vector4 const &Pos,
 // ---
 // NOTE: Lamda to write/draw text placed in engineering units.
 // ---
-auto ldaDrawText = [](Matrix const &MhE2P, Vector4 const &Pos,
-                      std::string const &Text, int FontSize = 20,
-                      Color Col = BLUE, float AlphaText = 1.f,
-                      float AlphaBox = 1.f) -> void {
+auto ldaDrawText = [](Matrix const&      MhE2P,
+                      Vector4 const&     Pos,
+                      std::string const& Text,
+                      int                FontSize  = 20,
+                      Color              Col       = BLUE,
+                      float              AlphaText = 1.f,
+                      float              AlphaBox  = 1.f) -> void {
   auto const PixelPos = MhE2P * Pos;
 
   // DrawLine(PixelPos.x, PixelPos.y, 0, 0, BLUE); //!< Debug help line.
@@ -653,29 +631,35 @@ auto ldaDrawText = [](Matrix const &MhE2P, Vector4 const &Pos,
 // ---
 // NOTE: Lamda to draw a point. Actually it draws a small circle.
 // ---
-auto ldaDrawPoint = [](Matrix const &MhE2P, Vector4 const &Pos,
-                       Vector4 const &m2Pixel, bool Print = false,
-                       Color Col = BLUE, float Alpha = 1.f) -> void {
+auto ldaDrawPoint = [](Matrix const&  MhE2P,
+                       Vector4 const& Pos,
+                       Vector4 const& m2Pixel,
+                       bool           Print = false,
+                       Color          Col   = BLUE,
+                       float          Alpha = 1.f) -> void {
   auto PixelPos = MhE2P * Pos;
   DrawPixel(PixelPos.x, PixelPos.y, ColorAlpha(RED, Alpha));
   constexpr float Radius = 0.01f;
-  DrawCircleLines(PixelPos.x, PixelPos.y, Radius * m2Pixel.x,
-                  ColorAlpha(Col, Alpha));
+  DrawCircleLines(PixelPos.x, PixelPos.y, Radius * m2Pixel.x, ColorAlpha(Col, Alpha));
   if (Print) {
     DrawLine(PixelPos.x, PixelPos.y, 0, 0, BLUE);
-    DrawText(std::string("CurvePoint x/y: " + std::to_string(PixelPos.x) +
-                         " / " + std::to_string(PixelPos.y))
-                 .c_str(),
-             140, 70, 20, BLUE);
+    DrawText(std::string("CurvePoint x/y: " + std::to_string(PixelPos.x) + " / " + std::to_string(PixelPos.y)).c_str(),
+             140,
+             70,
+             20,
+             BLUE);
   }
 };
 
 // ---
 // NOTE: Lamda to draw a point. Actually it draws a small circle.
 // ---
-auto ldaDrawPixel = [](Matrix const &MhE2P, Vector4 const &Pos,
-                       Vector4 const &m2Pixel, bool Print = false,
-                       Color Col = BLUE, float Alpha = 1.f) -> void {
+auto ldaDrawPixel = [](Matrix const&  MhE2P,
+                       Vector4 const& Pos,
+                       Vector4 const& m2Pixel,
+                       bool           Print = false,
+                       Color          Col   = BLUE,
+                       float          Alpha = 1.f) -> void {
   auto PixelPos = MhE2P * Pos;
   // DrawPixel(PixelPos.x, PixelPos.y, ColorAlpha(Col, Alpha));
   DrawPixel(PixelPos.x, PixelPos.y, Col);
@@ -684,30 +668,25 @@ auto ldaDrawPixel = [](Matrix const &MhE2P, Vector4 const &Pos,
 /**
  * Draw a circle with Radius - go figure.
  */
-auto ldaDrawCircle = [](Matrix const &MhE2P, Vector4 const &Centre,
-                        float Radius, Color Col = BLUE) -> void {
+auto ldaDrawCircle = [](Matrix const& MhE2P, Vector4 const& Centre, float Radius, Color Col = BLUE) -> void {
   auto CurvePoint = MhE2P * Centre;
   // Use MhE2P.m5 for scaling/zoom factor.
-  DrawCircleLines(CurvePoint.x, CurvePoint.y, Radius * MhE2P.m5,
-                  Fade(Col, 0.9f));
+  DrawCircleLines(CurvePoint.x, CurvePoint.y, Radius * MhE2P.m5, Fade(Col, 0.9f));
 };
 
 /**
  * Draw a circle with Radius - filled gradient version.
  */
-auto ldaDrawCircleG = [](Matrix const &MhE2P, Vector4 const &Centre,
-                         float Radius, Color Col = BLUE) -> void {
+auto ldaDrawCircleG = [](Matrix const& MhE2P, Vector4 const& Centre, float Radius, Color Col = BLUE) -> void {
   auto CurvePoint = MhE2P * Centre;
   // Use MhE2P.m5 for scaling/zoom factor.
-  DrawCircleGradient(CurvePoint.x, CurvePoint.y, Radius * MhE2P.m5,
-                     Fade(Col, 0.3f), Col);
+  DrawCircleGradient(CurvePoint.x, CurvePoint.y, Radius * MhE2P.m5, Fade(Col, 0.3f), Col);
 };
 
 /**
  * Function to draw a line between two points.
  */
-auto ldaDrawLine = [](Matrix const &MhE2P, Vector4 const &From,
-                      Vector4 const &To, Color Col = BLUE) -> void {
+auto ldaDrawLine = [](Matrix const& MhE2P, Vector4 const& From, Vector4 const& To, Color Col = BLUE) -> void {
   auto F = MhE2P * From;
   auto T = MhE2P * To;
   DrawLine(F.x, F.y, T.x, T.y, BLUE);
@@ -716,10 +695,10 @@ auto ldaDrawLine = [](Matrix const &MhE2P, Vector4 const &From,
 /**
  * Function to show the grid.
  */
-auto ldaShowGrid = [](data *pData) -> void {
+auto ldaShowGrid = [](data* pData) -> void {
   for (size_t Idx = 0; Idx < pData->GridCfg.vGridLines.size(); Idx += 2) {
-    auto const &Elem0 = pData->GridCfg.vGridLines[Idx];
-    auto const &Elem1 = pData->GridCfg.vGridLines[Idx + 1];
+    auto const& Elem0 = pData->GridCfg.vGridLines[Idx];
+    auto const& Elem1 = pData->GridCfg.vGridLines[Idx + 1];
 
     DrawLine(Elem0.X, Elem0.Y, Elem1.X, Elem1.Y, Fade(Elem0.color, 0.3f));
 
@@ -731,63 +710,63 @@ auto ldaShowGrid = [](data *pData) -> void {
   }
 };
 
-auto UpdateDrawFrameFourier(data *pData) -> void;
-auto UpdateDrawFrameFractal(data *pData) -> void;
-auto UpdateDrawFrameAsteroid(data *pData) -> void;
-auto UpdateDrawFrameHelp(data *pData) -> void;
+auto UpdateDrawFrameFourier(data* pData) -> void;
+auto UpdateDrawFrameFractal(data* pData) -> void;
+auto UpdateDrawFrameAsteroid(data* pData) -> void;
+auto UpdateDrawFrameHelp(data* pData) -> void;
 
 /**
  * Keyboard input handling common to all the drawing routines.
  */
-auto HandleInput(data *pData) -> bool {
+auto HandleInput(data* pData) -> bool {
 
   auto const MousePos = GetMousePosition();
-  pData->MousePosEng = pData->MhE2PInv * es::Point(MousePos.x, MousePos.y, 0.f);
+  pData->MousePosEng  = pData->MhE2PInv * es::Point(MousePos.x, MousePos.y, 0.f);
   pData->MousePosGrid = pData->MhG2E * pData->MousePosEng;
   ldaDrawText(
-      pData->MhE2P, es::Point(0.f, -1.f, 0.f),
-      std::string("MousePosGrid:" + std::to_string(pData->MousePosGrid.x) +
-                  " " + std::to_string(pData->MousePosGrid.y))
+      pData->MhE2P,
+      es::Point(0.f, -1.f, 0.f),
+      std::string("MousePosGrid:" + std::to_string(pData->MousePosGrid.x) + " " + std::to_string(pData->MousePosGrid.y))
           .c_str());
 
-  pData->MouseInput.MouseButtonUp = IsMouseButtonUp(0);
-  pData->MouseInput.MouseButtonDown = IsMouseButtonDown(0);
-  pData->MouseInput.MouseButtonPressed = IsMouseButtonPressed(0);
+  pData->MouseInput.MouseButtonUp       = IsMouseButtonUp(0);
+  pData->MouseInput.MouseButtonDown     = IsMouseButtonDown(0);
+  pData->MouseInput.MouseButtonPressed  = IsMouseButtonPressed(0);
   pData->MouseInput.MouseButtonReleased = IsMouseButtonReleased(0);
 
-  DrawText(std::string("Use arrow keys. Zoom: " +
-                       std::to_string(pData->vPixelsPerUnit.x) +
-                       ". n :" + std::to_string(pData->n) +
-                       ". Mouse: " + std::to_string(MousePos.x) + " " +
-                       std::to_string(MousePos.y) +
-                       ". Mouse Eng: " + std::to_string(pData->MousePosEng.x) +
-                       " " + std::to_string(pData->MousePosEng.y))
+  DrawText(std::string("Use arrow keys. Zoom: " + std::to_string(pData->vPixelsPerUnit.x) +
+                       ". n :" + std::to_string(pData->n) + ". Mouse: " + std::to_string(MousePos.x) + " " +
+                       std::to_string(MousePos.y) + ". Mouse Eng: " + std::to_string(pData->MousePosEng.x) + " " +
+                       std::to_string(pData->MousePosEng.y))
                .c_str(),
-           140, 10, 20, BLUE);
+           140,
+           10,
+           20,
+           BLUE);
 
   bool InputChanged{};
 
   constexpr float MinPixelPerUnit = 50.f;
-  auto const PixelPerUnitPrv = pData->vPixelsPerUnit;
+  auto const      PixelPerUnitPrv = pData->vPixelsPerUnit;
 
   if (pData->Key) {
     if (KEY_G == pData->Key) {
       pData->ShowGrid = !pData->ShowGrid;
-      InputChanged = true;
+      InputChanged    = true;
     } else if (KEY_DOWN == pData->Key) {
 
-      auto &vPPU = pData->vPixelsPerUnit;
-      vPPU.x = std::max(vPPU.x - 10.f, MinPixelPerUnit);
-      vPPU.y = std::max(vPPU.y - 10.f, MinPixelPerUnit);
-      vPPU.z = std::max(vPPU.z - 10.f, MinPixelPerUnit);
+      auto& vPPU = pData->vPixelsPerUnit;
+      vPPU.x     = std::max(vPPU.x - 10.f, MinPixelPerUnit);
+      vPPU.y     = std::max(vPPU.y - 10.f, MinPixelPerUnit);
+      vPPU.z     = std::max(vPPU.z - 10.f, MinPixelPerUnit);
 
       InputChanged = true;
     } else if (KEY_UP == pData->Key) {
 
-      auto &vPPU = pData->vPixelsPerUnit;
-      vPPU.x = std::max(vPPU.x + 10.f, MinPixelPerUnit);
-      vPPU.y = std::max(vPPU.y + 10.f, MinPixelPerUnit);
-      vPPU.z = std::max(vPPU.z + 10.f, MinPixelPerUnit);
+      auto& vPPU = pData->vPixelsPerUnit;
+      vPPU.x     = std::max(vPPU.x + 10.f, MinPixelPerUnit);
+      vPPU.y     = std::max(vPPU.y + 10.f, MinPixelPerUnit);
+      vPPU.z     = std::max(vPPU.z + 10.f, MinPixelPerUnit);
 
       InputChanged = true;
     } else if (KEY_LEFT == pData->Key) {
@@ -797,25 +776,25 @@ auto HandleInput(data *pData) -> bool {
       ++pData->n;
       InputChanged = true;
     } else if (KEY_SPACE == pData->Key) {
-      InputChanged = true;
+      InputChanged      = true;
       pData->StopUpdate = !pData->StopUpdate;
     } else if (KEY_A == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameAsteroid;
-      InputChanged = true;
+      InputChanged                  = true;
     } else if (KEY_F == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameFourier;
-      InputChanged = true;
+      InputChanged                  = true;
     } else if (KEY_R == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameFractal;
-      pData->NumTrendPoints = 0;
-      pData->CurrentTrendPoint = 0;
-      InputChanged = true;
+      pData->NumTrendPoints         = 0;
+      pData->CurrentTrendPoint      = 0;
+      InputChanged                  = true;
     } else if (KEY_L == pData->Key) {
       if (!pData->WikipediaLink.empty())
         OpenURL(pData->WikipediaLink.c_str());
     } else if (KEY_F1 == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameHelp;
-      InputChanged = true;
+      InputChanged                  = true;
     } else if (KEY_F2 == pData->Key) {
       pData->TakeScreenshot = true;
     } else if (data::pages::PageFractal == pData->PageNum) {
@@ -838,34 +817,28 @@ auto HandleInput(data *pData) -> bool {
   }
 
   if (InputChanged) {
-    pData->Xcalc = 0.0;
+    pData->Xcalc             = 0.0;
     pData->CurrentTrendPoint = 0;
 
     pData->MhE2P = InitEng2PixelMatrix(
-        pData->vEngOffset, pData->vPixelsPerUnit,
-        {pData->screenWidth / 2.f, pData->screenHeight / 2.f, 0.f, 0.f});
+        pData->vEngOffset, pData->vPixelsPerUnit, {pData->screenWidth / 2.f, pData->screenHeight / 2.f, 0.f, 0.f});
     pData->MhE2PInv = MatrixInvert(pData->MhE2P);
 
-    pData->GridCfg.GridDimensions.x = pData->GridCfg.GridDimensions.x *
-                                      PixelPerUnitPrv.x /
-                                      pData->vPixelsPerUnit.x;
-    pData->GridCfg.GridDimensions.y = pData->GridCfg.GridDimensions.y *
-                                      PixelPerUnitPrv.y /
-                                      pData->vPixelsPerUnit.y;
+    pData->GridCfg.GridDimensions.x = pData->GridCfg.GridDimensions.x * PixelPerUnitPrv.x / pData->vPixelsPerUnit.x;
+    pData->GridCfg.GridDimensions.y = pData->GridCfg.GridDimensions.y * PixelPerUnitPrv.y / pData->vPixelsPerUnit.y;
 
     pData->GridCfg = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
 
     if (data::pages::PageFractal == pData->PageNum) {
       pData->FractalConfig = fluffy::fractal::CreateFractalVector(
-          pData->GridCfg.GridDimensions, pData->FractalConfig.Constant,
-          DiagVectorAbs(pData->MhE2P));
+          pData->GridCfg.GridDimensions, pData->FractalConfig.Constant, DiagVectorAbs(pData->MhE2P));
     }
   }
 
   if (false && pData->MouseInput.MouseButtonReleased) {
     pData->GridCfg.GridOrigo.x = pData->MousePosEng.x;
     pData->GridCfg.GridOrigo.y = pData->MousePosEng.y;
-    pData->GridCfg = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
+    pData->GridCfg             = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
   }
 
   return InputChanged;
@@ -874,42 +847,40 @@ auto HandleInput(data *pData) -> bool {
 /**
  * Draw an animation of n - terms of a Fourier square wave.
  */
-auto UpdateDrawFrameFourier(data *pData) -> void {
+auto UpdateDrawFrameFourier(data* pData) -> void {
 
   if (data::pages::PageFourier != pData->PageNum) {
     pData->WikipediaLink = "https://en.wikipedia.org/wiki/Square_wave";
-    pData->PageNum = data::pages::PageFourier;
+    pData->PageNum       = data::pages::PageFourier;
   }
 
   BeginDrawing();
   ClearBackground(RAYWHITE);
 
-  DrawText(std::string("Num terms: " + std::to_string(pData->n) +
-                       ". Key:" + std::to_string(pData->KeyPrv) +
+  DrawText(std::string("Num terms: " + std::to_string(pData->n) + ". Key:" + std::to_string(pData->KeyPrv) +
                        ". Time:" + std::to_string(pData->Xcalc))
                .c_str(),
-           140, 40, 20, BLUE);
+           140,
+           40,
+           20,
+           BLUE);
 
   {
     ldaDrawText(pData->MhE2P,
-                es::Point(pData->GridCfg.GridScreenCentre.x -
-                              pData->GridCfg.GridDimensions.x / 2.f,
+                es::Point(pData->GridCfg.GridScreenCentre.x - pData->GridCfg.GridDimensions.x / 2.f,
                           -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f),
                           0.f),
                 pData->WikipediaLink);
 
     auto const BoxPosition =
-        es::Point(pData->GridCfg.GridScreenCentre.x -
-                      21.f * pData->GridCfg.GridDimensions.x / 40.f,
-                  -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f), 0.f);
+        es::Point(pData->GridCfg.GridScreenCentre.x - 21.f * pData->GridCfg.GridDimensions.x / 40.f,
+                  -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f),
+                  0.f);
     auto const BoxDimension =
-        es::Vector(5.f / 8.f * pData->GridCfg.GridDimensions.x,
-                   pData->GridCfg.GridDimensions.y / 15.f, 0.f);
+        es::Vector(5.f / 8.f * pData->GridCfg.GridDimensions.x, pData->GridCfg.GridDimensions.y / 15.f, 0.f);
 
-    if (pData->MousePosEng.x > BoxPosition.x &&
-        pData->MousePosEng.x < (BoxPosition.x + BoxDimension.x) &&
-        pData->MousePosEng.y > BoxPosition.y &&
-        pData->MousePosEng.y < (BoxPosition.y + BoxDimension.y)) {
+    if (pData->MousePosEng.x > BoxPosition.x && pData->MousePosEng.x < (BoxPosition.x + BoxDimension.x) &&
+        pData->MousePosEng.y > BoxPosition.y && pData->MousePosEng.y < (BoxPosition.y + BoxDimension.y)) {
 
       ldaDrawBox(pData->MhE2P, BoxPosition, BoxDimension);
 
@@ -929,14 +900,11 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
   }
 
   auto const Frequency = 2.0;
-  auto const Omegat = M_2_PI * Frequency * pData->t;
-  auto const Radius = 4.f / M_PI;
-  auto Centre = es::Point(pData->GridCfg.GridScreenCentre.x -
-                              pData->GridCfg.GridDimensions.x / 2.f - Radius,
-                          0.f, 0.f);
+  auto const Omegat    = M_2_PI * Frequency * pData->t;
+  auto const Radius    = 4.f / M_PI;
+  auto Centre = es::Point(pData->GridCfg.GridScreenCentre.x - pData->GridCfg.GridDimensions.x / 2.f - Radius, 0.f, 0.f);
 
-  auto Ft =
-      Centre + es::Vector(Radius * cosf(Omegat), Radius * sinf(Omegat), 0.f);
+  auto Ft = Centre + es::Vector(Radius * cosf(Omegat), Radius * sinf(Omegat), 0.f);
 
   ldaDrawCircle(pData->MhE2P, Centre, Radius);
 
@@ -949,8 +917,8 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
   auto Ftp = Ft;
   for (int Idx = 1; Idx < pData->n; ++Idx) {
     auto nthTerm = 1.f + Idx * 2.f;
-    auto Ftn = Ftp + es::Vector(Radius / nthTerm * cosf(nthTerm * Omegat),
-                                Radius / nthTerm * sinf(nthTerm * Omegat), 0.f);
+    auto Ftn =
+        Ftp + es::Vector(Radius / nthTerm * cosf(nthTerm * Omegat), Radius / nthTerm * sinf(nthTerm * Omegat), 0.f);
     ldaDrawLine(pData->MhE2P, Ftp, Ftn);
     ldaDrawCircle(pData->MhE2P, Ftn, Radius / nthTerm);
     Ftp = Ftn;
@@ -962,12 +930,11 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
   // ---
   // NOTE: Reset X value axis plots
   // ---
-  auto const GridRight =
-      pData->GridCfg.GridScreenCentre.x + pData->GridCfg.GridDimensions.x / 2.f;
+  auto const GridRight = pData->GridCfg.GridScreenCentre.x + pData->GridCfg.GridDimensions.x / 2.f;
 
   if (pData->Xcalc > GridRight) {
-    auto const GridLeft = -GridRight;
-    pData->Xcalc = GridLeft;
+    auto const GridLeft      = -GridRight;
+    pData->Xcalc             = GridLeft;
     pData->CurrentTrendPoint = 0;
   }
 
@@ -977,8 +944,7 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
   pData->vTrendPoints[pData->CurrentTrendPoint] = (AnimationPoint);
 
   for (size_t Idx = 0; Idx < pData->CurrentTrendPoint; ++Idx) {
-    ldaDrawPoint(pData->MhE2P, pData->vTrendPoints[Idx],
-                 {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f});
+    ldaDrawPoint(pData->MhE2P, pData->vTrendPoints[Idx], {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f});
   }
 
   // Draw the inner circle line
@@ -992,7 +958,7 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
 
   if (pData->TakeScreenshot) {
     pData->TakeScreenshot = false;
-    auto const FileName = std::string(__FUNCTION__) + ".png";
+    auto const FileName   = std::string(__FUNCTION__) + ".png";
     TakeScreenshot(FileName.c_str());
   }
 }
@@ -1000,11 +966,11 @@ auto UpdateDrawFrameFourier(data *pData) -> void {
 /**
  * Draw a Fractal.
  */
-auto UpdateDrawFrameFractal(data *pData) -> void {
+auto UpdateDrawFrameFractal(data* pData) -> void {
 
   if (data::pages::PageFractal != pData->PageNum) {
     pData->WikipediaLink = "https://en.wikipedia.org/wiki/Fractal";
-    pData->PageNum = data::pages::PageFractal;
+    pData->PageNum       = data::pages::PageFractal;
   }
 
   BeginDrawing();
@@ -1018,11 +984,14 @@ auto UpdateDrawFrameFractal(data *pData) -> void {
     // ---
     // NOTE: Iterate over the vector of vector of pixels.
     // ---
-    for (auto const &Evv : pData->FractalConfig.vvFractalPixels) {
-      for (auto const &Ev : Evv) {
+    for (auto const& Evv : pData->FractalConfig.vvFractalPixels) {
+      for (auto const& Ev : Evv) {
         auto Col = Ev.Col;
-        ldaDrawPixel(pData->MhE2P, pData->MhG2EInv * Ev.Pos,
-                     {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f}, NoPrint, Col,
+        ldaDrawPixel(pData->MhE2P,
+                     pData->MhG2EInv * Ev.Pos,
+                     {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
+                     NoPrint,
+                     Col,
                      Ev.Col.a);
       }
     }
@@ -1035,42 +1004,35 @@ auto UpdateDrawFrameFractal(data *pData) -> void {
     //                {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f}, NoPrint,
     //                Col, E.Col.a);
     // }
-    ldaDrawText(
-        pData->MhE2P,
-        es::Point(pData->GridCfg.GridScreenCentre.x -
-                      pData->GridCfg.GridDimensions.x / 2.f,
-                  -(pData->GridCfg.GridDimensions.y / 2.f * 0.85f), 0.f),
-        std::string(std::to_string(pData->FractalConfig.Constant.x) + " " +
-                    std::to_string(pData->FractalConfig.Constant.y) + "j"));
+    ldaDrawText(pData->MhE2P,
+                es::Point(pData->GridCfg.GridScreenCentre.x - pData->GridCfg.GridDimensions.x / 2.f,
+                          -(pData->GridCfg.GridDimensions.y / 2.f * 0.85f),
+                          0.f),
+                std::string(std::to_string(pData->FractalConfig.Constant.x) + " " +
+                            std::to_string(pData->FractalConfig.Constant.y) + "j"));
   }
 
   {
     ldaDrawText(pData->MhE2P,
-                es::Point(pData->GridCfg.GridScreenCentre.x -
-                              pData->GridCfg.GridDimensions.x / 2.f,
+                es::Point(pData->GridCfg.GridScreenCentre.x - pData->GridCfg.GridDimensions.x / 2.f,
                           -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f),
                           0.f),
                 pData->WikipediaLink);
 
     auto const BoxPosition =
-        es::Point(pData->GridCfg.GridScreenCentre.x -
-                      21.f * pData->GridCfg.GridDimensions.x / 40.f,
-                  -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f), 0.f);
+        es::Point(pData->GridCfg.GridScreenCentre.x - 21.f * pData->GridCfg.GridDimensions.x / 40.f,
+                  -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f),
+                  0.f);
     auto const BoxDimension =
-        es::Vector(5.f / 8.f * pData->GridCfg.GridDimensions.x,
-                   pData->GridCfg.GridDimensions.y / 15.f, 0.f);
+        es::Vector(5.f / 8.f * pData->GridCfg.GridDimensions.x, pData->GridCfg.GridDimensions.y / 15.f, 0.f);
 
-    if (pData->MousePosEng.x > BoxPosition.x &&
-        pData->MousePosEng.x < (BoxPosition.x + BoxDimension.x) &&
-        pData->MousePosEng.y > BoxPosition.y &&
-        pData->MousePosEng.y < (BoxPosition.y + BoxDimension.y)) {
+    if (pData->MousePosEng.x > BoxPosition.x && pData->MousePosEng.x < (BoxPosition.x + BoxDimension.x) &&
+        pData->MousePosEng.y > BoxPosition.y && pData->MousePosEng.y < (BoxPosition.y + BoxDimension.y)) {
 
       ldaDrawBox(pData->MhE2P, BoxPosition, BoxDimension);
 
-      ldaDrawLine(pData->MhE2P, es::Point(-1.f, 0.f, 0.f),
-                  es::Point(-1.f, 2.f, 0.f));
-      ldaDrawLine(pData->MhE2P, es::Point(-1.01f, 0.f, 0.f),
-                  es::Point(-1.01f, 2.f, 0.f));
+      ldaDrawLine(pData->MhE2P, es::Point(-1.f, 0.f, 0.f), es::Point(-1.f, 2.f, 0.f));
+      ldaDrawLine(pData->MhE2P, es::Point(-1.01f, 0.f, 0.f), es::Point(-1.01f, 2.f, 0.f));
 
       if (pData->MouseInput.MouseButtonReleased)
         if (!pData->WikipediaLink.empty())
@@ -1083,27 +1045,24 @@ auto UpdateDrawFrameFractal(data *pData) -> void {
   //       the point that was clicked.
   // ---
   {
-    auto const &GridC = pData->GridCfg.GridScreenCentre;
-    auto const &GridD = pData->GridCfg.GridDimensions;
-    auto const GridP = GridC - GridD * (1.f / 2.f);
+    auto const& GridC = pData->GridCfg.GridScreenCentre;
+    auto const& GridD = pData->GridCfg.GridDimensions;
+    auto const  GridP = GridC - GridD * (1.f / 2.f);
 
     // ldaDrawBox(pData->MhE2P,
     //            es::Point(pData->MousePosEng.x, pData->MousePosEng.y, 0.f),
     //            GridD, RED);
 
-    if (pData->MousePosEng.x > (GridP.x) &&
-        pData->MousePosEng.x < (GridP.x + GridD.x) &&
-        pData->MousePosEng.y > (GridP.y) &&
-        pData->MousePosEng.y < (GridP.y + GridD.y)) {
+    if (pData->MousePosEng.x > (GridP.x) && pData->MousePosEng.x < (GridP.x + GridD.x) &&
+        pData->MousePosEng.y > (GridP.y) && pData->MousePosEng.y < (GridP.y + GridD.y)) {
 
       // ldaDrawBox(pData->MhE2P, GridP, GridD, ORANGE);
 
       if (pData->MouseInput.MouseButtonReleased) {
-        pData->GridCfg.GridOrigo =
-            pData->GridCfg.GridOrigo + pData->MousePosEng;
-        pData->GridCfg = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
-        pData->MhG2E = es::SetTranslation(pData->MousePosGrid);
-        pData->MhG2EInv = MatrixInvert(pData->MhG2E);
+        pData->GridCfg.GridOrigo = pData->GridCfg.GridOrigo + pData->MousePosEng;
+        pData->GridCfg           = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
+        pData->MhG2E             = es::SetTranslation(pData->MousePosGrid);
+        pData->MhG2EInv          = MatrixInvert(pData->MhG2E);
       }
     }
   }
@@ -1144,7 +1103,7 @@ auto UpdateDrawFrameFractal(data *pData) -> void {
 
   if (pData->TakeScreenshot) {
     pData->TakeScreenshot = false;
-    auto const FileName = std::string(__FUNCTION__) + ".png";
+    auto const FileName   = std::string(__FUNCTION__) + ".png";
     TakeScreenshot(FileName.c_str());
   }
 }
@@ -1153,43 +1112,40 @@ auto UpdateDrawFrameFractal(data *pData) -> void {
  * Draw an animation of the Asteroid parametric equation.
  * link: https://en.wikipedia.org/wiki/Astroid
  */
-auto UpdateDrawFrameAsteroid(data *pData) -> void {
+auto UpdateDrawFrameAsteroid(data* pData) -> void {
 
   if (data::pages::PageAsteroid != pData->PageNum) {
     pData->WikipediaLink = "https://en.wikipedia.org/wiki/Astroid";
-    pData->PageNum = data::pages::PageAsteroid;
+    pData->PageNum       = data::pages::PageAsteroid;
   }
 
   BeginDrawing();
   ClearBackground(WHITE);
 
-  DrawText(std::string("Asteriode. Key:" + std::to_string(pData->KeyPrv) +
-                       ". Time:" + std::to_string(pData->Xcalc))
-               .c_str(),
-           140, 40, 20, BLUE);
+  DrawText(
+      std::string("Asteriode. Key:" + std::to_string(pData->KeyPrv) + ". Time:" + std::to_string(pData->Xcalc)).c_str(),
+      140,
+      40,
+      20,
+      BLUE);
 
   {
-    auto const PosTxt =
-        es::Point(pData->GridCfg.GridScreenCentre.x -
-                      pData->GridCfg.GridDimensions.x / 2.f,
-                  -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f), 0.f);
+    auto const PosTxt = es::Point(pData->GridCfg.GridScreenCentre.x - pData->GridCfg.GridDimensions.x / 2.f,
+                                  -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f),
+                                  0.f);
 
-    ldaDrawText(pData->MhE2P, PosTxt, pData->WikipediaLink, 20, GREEN, 0.7f,
-                0.05f);
+    ldaDrawText(pData->MhE2P, PosTxt, pData->WikipediaLink, 20, GREEN, 0.7f, 0.05f);
 
     {
       auto const BoxPosition =
-          es::Point(pData->GridCfg.GridScreenCentre.x -
-                        21.f * pData->GridCfg.GridDimensions.x / 40.f,
-                    -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f), 0.f);
+          es::Point(pData->GridCfg.GridScreenCentre.x - 21.f * pData->GridCfg.GridDimensions.x / 40.f,
+                    -(pData->GridCfg.GridDimensions.y / 2.f * 1.15f),
+                    0.f);
       auto const BoxDimension =
-          es::Vector(5.f / 8.f * pData->GridCfg.GridDimensions.x,
-                     pData->GridCfg.GridDimensions.y / 15.f, 0.f);
+          es::Vector(5.f / 8.f * pData->GridCfg.GridDimensions.x, pData->GridCfg.GridDimensions.y / 15.f, 0.f);
 
-      if (pData->MousePosEng.x > BoxPosition.x &&
-          pData->MousePosEng.x < (BoxPosition.x + BoxDimension.x) &&
-          pData->MousePosEng.y > BoxPosition.y &&
-          pData->MousePosEng.y < (BoxPosition.y + BoxDimension.y)) {
+      if (pData->MousePosEng.x > BoxPosition.x && pData->MousePosEng.x < (BoxPosition.x + BoxDimension.x) &&
+          pData->MousePosEng.y > BoxPosition.y && pData->MousePosEng.y < (BoxPosition.y + BoxDimension.y)) {
 
         ldaDrawBox(pData->MhE2P, BoxPosition, BoxDimension);
 
@@ -1210,7 +1166,7 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
   }
 
   auto constexpr Radius = 1.f;
-  auto const t = pData->t;
+  auto const t          = pData->t;
 
   // ---
   // NOTE: The formula to compute the Asteroide.
@@ -1226,8 +1182,7 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
 
   auto GridStart = es::Point(0.f, 0.f, 0.f);
 
-  auto AnimationSmallCircle =
-      GridStart + es::Vector(3.f / 4.f * FixedCx, 3.f / 4.f * FixedCy, 0.f);
+  auto AnimationSmallCircle = GridStart + es::Vector(3.f / 4.f * FixedCx, 3.f / 4.f * FixedCy, 0.f);
 
   auto constexpr DotSize = 0.025f;
 
@@ -1244,7 +1199,7 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
   // NOTE: Reset X value axis plots
   // ---
   if (pData->Xcalc > 2.f * M_PI) {
-    pData->Xcalc = 0.f;
+    pData->Xcalc             = 0.f;
     pData->CurrentTrendPoint = 0;
   }
 
@@ -1253,9 +1208,7 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
   // Draw the actual trend
   pData->vTrendPoints[pData->CurrentTrendPoint] = AnimationPoint;
 
-  for (size_t Idx = 0;
-       Idx < std::min(pData->vTrendPoints.size(), pData->NumTrendPoints);
-       ++Idx) {
+  for (size_t Idx = 0; Idx < std::min(pData->vTrendPoints.size(), pData->NumTrendPoints); ++Idx) {
 
     // ---
     // NOTE: Compute the Alpha channel.
@@ -1268,18 +1221,20 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
     //       CurrentTrendPoint
     //       t0
     auto Alpha = 0.f;
-    auto t0 = 0.f;
+    auto t0    = 0.f;
     if (Idx < pData->CurrentTrendPoint) { //!< segment a
-      t0 = float(pData->NumTrendPoints - pData->CurrentTrendPoint) /
-           float(pData->NumTrendPoints);
+      t0 = float(pData->NumTrendPoints - pData->CurrentTrendPoint) / float(pData->NumTrendPoints);
     } else { //!< segment b -> do nothing
     }
     auto const t = float(Idx) / float(pData->NumTrendPoints) + t0;
-    Alpha = es::Lerp(es::Vector(0.f, 0.f, 0.f), es::Vector(1.f, 0.f, 0.f), t).x;
+    Alpha        = es::Lerp(es::Vector(0.f, 0.f, 0.f), es::Vector(1.f, 0.f, 0.f), t).x;
 
-    ldaDrawPoint(pData->MhE2P, pData->vTrendPoints[Idx],
-                 {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f}, false,
-                 Idx < pData->CurrentTrendPoint ? BLUE : RED, Alpha);
+    ldaDrawPoint(pData->MhE2P,
+                 pData->vTrendPoints[Idx],
+                 {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
+                 false,
+                 Idx < pData->CurrentTrendPoint ? BLUE : RED,
+                 Alpha);
   }
 
   ldaDrawLine(pData->MhE2P, AnimationPoint, AnimationSmallCircle);
@@ -1287,14 +1242,13 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
 
   ++pData->CurrentTrendPoint;
 
-  pData->NumTrendPoints =
-      std::max(pData->CurrentTrendPoint, pData->NumTrendPoints);
+  pData->NumTrendPoints = std::max(pData->CurrentTrendPoint, pData->NumTrendPoints);
 
   EndDrawing();
 
   if (pData->TakeScreenshot) {
     pData->TakeScreenshot = false;
-    auto const FileName = std::string(__FUNCTION__) + ".png";
+    auto const FileName   = std::string(__FUNCTION__) + ".png";
     TakeScreenshot(FileName.c_str());
   }
 }
@@ -1302,27 +1256,26 @@ auto UpdateDrawFrameAsteroid(data *pData) -> void {
 /**
  * Display a page with some help text.
  */
-auto UpdateDrawFrameHelp(data *pData) -> void {
+auto UpdateDrawFrameHelp(data* pData) -> void {
 
   if (data::pages::PageHelp != pData->PageNum) {
     pData->WikipediaLink = "";
-    pData->PageNum = data::pages::PageHelp;
+    pData->PageNum       = data::pages::PageHelp;
   }
 
   BeginDrawing();
   ClearBackground(LIGHTGRAY);
 
   constexpr auto TextOffsetY = 25u;
-  constexpr auto TextPosY = 40u;
-  auto TextIdx = 0u;
+  constexpr auto TextPosY    = 40u;
+  auto           TextIdx     = 0u;
 
   DrawText("Available pages", 40, TextPosY + (TextIdx * TextOffsetY), 20, BLUE);
 
   auto ldaDisplayHelpText = [&](std::string HelpText) -> unsigned int {
     ++TextIdx;
 
-    DrawText(HelpText.c_str(), 40, TextPosY + (TextIdx * TextOffsetY), 20,
-             BLUE);
+    DrawText(HelpText.c_str(), 40, TextPosY + (TextIdx * TextOffsetY), 20, BLUE);
     return TextIdx;
   };
 
@@ -1339,7 +1292,7 @@ auto UpdateDrawFrameHelp(data *pData) -> void {
 /**
  *
  */
-auto main(int argc, char const *argv[]) -> int {
+auto main(int argc, char const* argv[]) -> int {
 
   SetTraceLogLevel(LOG_ALL);
 
@@ -1361,8 +1314,7 @@ auto main(int argc, char const *argv[]) -> int {
 
   // Initialization
   // ---
-  InitWindow(Data.screenWidth, Data.screenHeight,
-             "Fluffy's adventures with Raylib");
+  InitWindow(Data.screenWidth, Data.screenHeight, "Fluffy's adventures with Raylib");
 
   Data.vHelpTextPage.push_back("F1 - This help page");
   Data.vHelpTextPage.push_back("F2 - ScreenShot");
@@ -1371,10 +1323,8 @@ auto main(int argc, char const *argv[]) -> int {
   Data.vHelpTextPage.push_back("g -  toggle Grid");
   Data.vHelpTextPage.push_back("l -  open current page's web Link");
   Data.vHelpTextPage.push_back("r -  fRactal");
-  Data.vHelpTextPage.push_back(
-      "On page fRactal - F7/F8 changes Constant Real value");
-  Data.vHelpTextPage.push_back(
-      "On page fRactal - F9/F10 changes Constant Imaginary value");
+  Data.vHelpTextPage.push_back("On page fRactal - F7/F8 changes Constant Real value");
+  Data.vHelpTextPage.push_back("On page fRactal - F9/F10 changes Constant Imaginary value");
 
   // ---
   SetTargetFPS(60); // Set our game to run at X frames-per-second
@@ -1395,28 +1345,29 @@ auto main(int argc, char const *argv[]) -> int {
   // NOTE: Set up Homogenous matrix for conversion to pixel space.
   // ---
   Data.MhE2P = InitEng2PixelMatrix(
-      Data.vEngOffset, Data.vPixelsPerUnit,
-      {Data.screenWidth / 2.f, Data.screenHeight / 2.f, 0.f, 0.f});
+      Data.vEngOffset, Data.vPixelsPerUnit, {Data.screenWidth / 2.f, Data.screenHeight / 2.f, 0.f, 0.f});
 
-  Data.MhG2E = es::SetTranslation(es::Vector(0.f, 0.f, 0.f));
+  Data.MhG2E    = es::SetTranslation(es::Vector(0.f, 0.f, 0.f));
   Data.MhG2EInv = MatrixInvert(Data.MhG2E);
 
   if (es::IsMatrixInvertible(Data.MhE2P)) {
     Data.MhE2PInv = MatrixInvert(Data.MhE2P);
 
-    auto const OrigoScreenInPixels =
-        es::Point(Data.screenWidth / 2.f, Data.screenHeight / 2.f, 0.f);
+    auto const OrigoScreenInPixels = es::Point(Data.screenWidth / 2.f, Data.screenHeight / 2.f, 0.f);
 
     auto const EngPos = Data.MhE2PInv * OrigoScreenInPixels;
 
-    TraceLog(LOG_INFO, "Pixel Pos %i:%i is mapped from engineering Pos %f:%f",
-             OrigoScreenInPixels.x, OrigoScreenInPixels.y, EngPos.x, EngPos.y);
+    TraceLog(LOG_INFO,
+             "Pixel Pos %i:%i is mapped from engineering Pos %f:%f",
+             OrigoScreenInPixels.x,
+             OrigoScreenInPixels.y,
+             EngPos.x,
+             EngPos.y);
 
   } else {
     std::cerr << "The Homogenous matrix MhE2P is not invertible." << std::endl;
     std::cout << Data.MhE2P << std::endl;
-    std::cerr << "Will not be able to convert to engineering pos from PixelPos."
-              << std::endl;
+    std::cerr << "Will not be able to convert to engineering pos from PixelPos." << std::endl;
     return 1;
   }
 
@@ -1429,8 +1380,7 @@ auto main(int argc, char const *argv[]) -> int {
   // NOTE: Create a simple fractal before startup.
   // ---
   Data.FractalConfig = fluffy::fractal::CreateFractalVector(
-      Data.GridCfg.GridDimensions, es::Vector(-0.4f, 0.6f, 0.f),
-      DiagVectorAbs(Data.MhE2P));
+      Data.GridCfg.GridDimensions, es::Vector(-0.4f, 0.6f, 0.f), DiagVectorAbs(Data.MhE2P));
 
   Data.UpdateDrawFramePointer = UpdateDrawFrameHelp;
 
@@ -1455,3 +1405,27 @@ auto main(int argc, char const *argv[]) -> int {
 
   return 0;
 }
+
+/**
+MIT License
+
+Copyright (c) 2023 Willy Clarke
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
