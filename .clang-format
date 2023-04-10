@@ -1,0 +1,12 @@
+---
+Language:        Cpp
+# BasedOnStyle:  LLVM
+ColumnLimit:     120
+
+AlignAfterOpenBracket: true
+AlignConsecutiveDeclarations: true
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackParameters: false
+PointerAlignment: Left
+BinPackArguments : false
+AlignConsecutiveAssignments : true
