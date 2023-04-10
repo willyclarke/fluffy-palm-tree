@@ -4,6 +4,13 @@
 
 My adventures with Raylib.
 
+Create a grid that can be populated by pixels in engineering units.
+
+1. Display an Asteroid.
+2. Display an animation of how a square wave can be created with Fourier series.
+3. Create a display with a Julia set fractal. Can be zoomed into. Uses multiple threads
+   for generation of the fractal.
+
 It continues on the initial FourierWithRaylib project that
 I created on [Github](https://github.com/willyclarke/fourierserieswithraylib.git).
 
@@ -57,6 +64,8 @@ sudo snap install cmake --classic
 ![Screenshot of Asteroide Plot](assets/UpdateDrawFrameAsteroid.png)
 
 ![Screenshot of Fourier Plot](assets/UpdateDrawFrameFourier.png)
+
+![Screenshot of Julia set Fractal Plot](assets/UpdateDrawFrameFractal640.png)
 
 ## Runs on
 
