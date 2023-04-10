@@ -25,9 +25,264 @@
 #include <cstdio>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
+namespace fluffy {
+namespace fractal {
+struct pixel {
+  Vector4 Pos{0.f, 0.f, 0.f, 1.f}; //!< Make it a point.
+  Color Col{BLACK};
+};
+
+struct config {
+  Vector4 Constant{-0.4f, 0.6f, 0.f, 0.f};
+  Vector4 Dimension{2.f, 2.f, 0.f, 0.f};
+  std::vector<fluffy::fractal::pixel> vFractalPixels{};
+  std::vector<std::vector<fluffy::fractal::pixel>> vvFractalPixels{};
+};
+
+/**
+ * Compute Zn^2 + C
+ */
+auto ComputeNext(Vector4 const &Current, Vector4 const &Constant) -> Vector4 {
+
+  // Zn^2
+  auto const Zr = Current.x * Current.x - Current.y * Current.y;
+  auto const Zi = 2.f * Current.x * Current.y;
+
+  // Add constant ane return
+  return es::Vector(Zr, Zi, 0.f) + Constant;
+}
+
+/**
+ * Return the mod squared.
+ */
+auto Mod2(Vector4 const &Z) -> float { return Z.x * Z.x + Z.y * Z.y; }
+
+/**
+ * Compute sequence elements until Mod exceeds threshold or max iterations.
+ */
+auto ComputeIterations(Vector4 const &Z0, Vector4 const &Constant,
+                       int MaxIterations = 50) -> float {
+  auto Zn = Z0;
+  auto Iteration{0};
+  while (Mod2(Zn) < 4.f && Iteration < MaxIterations) {
+    Zn = ComputeNext(Zn, Constant);
+    ++Iteration;
+  }
+
+  // Create a smooth iteration count.
+  auto const Mod = std::sqrtf(Mod2(Zn));
+  auto const SmoothIteration =
+      float(Iteration) - std::log2f(std::max(1.f, std::log2f(Mod)));
+  // std::cout << "SmoothIteration:" << SmoothIteration
+  //           << ". Iteration:" << Iteration << Z0 << " " << Zn << std::endl;
+
+  return SmoothIteration;
+}
+
+#if 0 // Code from https://www.youtube.com/watch?v=uc2yok_pLV4&t=244s
+/**
+ * Compute pixels color. Iterates over pixel space.
+ */
+auto Render(Vector4 const &RenderSize, Vector4 const &Constant) -> void {
+  // Compute the size of the
+  auto const Scale = 1.f / (RenderSize.y / 2.f);
+  for (int Y{}; Y < RenderSize.y; ++Y) {
+    for (int X{}; X < RenderSize.x; ++X) {
+      // Compute the pixel coordinates.
+      auto const Px = float(X - RenderSize.x / 2.f) / Scale;
+      auto const Py = float(Y - RenderSize.y / 2.f) / Scale;
+      // Compute the pixel color.
+      auto constexpr MaxIterations = 50;
+      auto const Iterations =
+          ComputeIterations(es::Point(Px, Py, 0.f), Constant, MaxIterations);
+      // SetPixelColor(X, Y, gradient.getColor(Iterations);
+    }
+  }
+}
+#endif
+
+/**
+ * Compute pixels color. Iterates over Canvas.
+ * @RenderSize - Set up a canvas that is X units wide and Y units high.
+ * @Constant - Tunable for the fractal.
+ * @return - A vector with pixel colors.
+ * TODO: (Willy Clarke) : Get hold of the pixelsize and set the increment
+ * accordingly.
+ */
+auto CreateFractalVector(Vector4 const &RenderSize, Vector4 const &Constant,
+                         Vector4 const &Resolution) -> fluffy::fractal::config {
+
+  auto ldaSetPixelColor = [](Vector4 const &Pos, int Iterations,
+                             int MaxIterations) -> fluffy::fractal::pixel {
+    fluffy::fractal::pixel Result{};
+    Result.Pos = Pos;
+    Result.Col.r = 0xFF & Iterations;
+    Result.Col.g = 0xFF & (Iterations >> 8);
+    Result.Col.b = 0xFF & (Iterations >> 16);
+    Result.Col.a =
+        0xFF &
+        int(255.f - float(255.f * float(Iterations) / float(MaxIterations)));
+
+    return Result;
+  };
+
+  std::vector<fluffy::fractal::pixel> vPixel{};
+
+  std::mutex io_mutex;
+
+  struct box {
+    size_t Idx{0xFFFF};
+    Vector4 LowerLeft{};
+    Vector4 UpperRigth{};
+  };
+
+  auto ldaCreateFractalJuliaSet =
+      [&ldaSetPixelColor, &io_mutex](
+          box const &Box, Vector4 const &Resolution,
+          Vector4 const &Constant) -> std::vector<fluffy::fractal::pixel> {
+    std::vector<fluffy::fractal::pixel> vPixelCfg{};
+
+    auto const IncrementX = 1.f / Resolution.x;
+    auto const IncrementY = 1.f / Resolution.y;
+    auto X = Box.LowerLeft.x;
+    auto Y = Box.LowerLeft.y;
+    auto MaxRegisteredIterations{0.f};
+
+    while (Y < Box.UpperRigth.y) {
+      while (X < Box.UpperRigth.x) {
+
+        auto const Pos = es::Point(X, Y, 0.f);
+
+        // Compute the pixel color.
+        auto constexpr MaxIterations = 500;
+        auto const Iterations = ComputeIterations(Pos, Constant, MaxIterations);
+        vPixelCfg.push_back(ldaSetPixelColor(Pos, Iterations, MaxIterations));
+        MaxRegisteredIterations = std::max(MaxRegisteredIterations, Iterations);
+
+        X += IncrementX;
+      }
+      X = Box.LowerLeft.x;
+      Y += IncrementY;
+    }
+
+    {
+      std::lock_guard<std::mutex> const lk(io_mutex);
+#if 0
+      std::cout << "-----------------------------------------------------------"
+                << std::endl;
+      std::cout << "Julia: Idx: " << Box.Idx
+                << "\nBox.LowerLeft: " << Box.LowerLeft
+                << "\nBox.UpperRigth: " << Box.UpperRigth << "\nX final " << X
+                << "\nY final " << Y << ". IncrementX: " << IncrementX
+                << ". IncrementY: " << IncrementY << std::endl;
+      std::cout << "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                << std::endl;
+#endif
+    }
+
+    return vPixelCfg;
+  };
+
+  auto const Start = es::Vector(-RenderSize.x, -RenderSize.y, 0.f) * 0.5f;
+
+  // ---
+  // NOTE: Set up Nthreads and give a block of the fractal to compute per.
+  // available thread.
+  // ---
+  auto const Nthreads =
+      std::max<unsigned int>(std::thread::hardware_concurrency(), 1);
+
+  auto const NumBlocksX = 1;
+  auto const NumBlocksY = Nthreads;
+  auto const BlockSize =
+      es::Vector(RenderSize.x / NumBlocksX, RenderSize.y / NumBlocksY, 0.f);
+
+  std::vector<box> vBox{};
+
+  for (int Jdx = 0;      //!<
+       Jdx < NumBlocksY; //!<
+       ++Jdx) {
+    for (int Idx = 0;      //!<
+         Idx < NumBlocksX; //!<
+         ++Idx) {
+
+      box Box{};
+      Box.LowerLeft =
+          Start + es::Vector(Idx * BlockSize.x, Jdx * BlockSize.y, 0.f);
+      Box.UpperRigth = Box.LowerLeft + BlockSize;
+      Box.Idx = vBox.size();
+      vBox.push_back(Box);
+    }
+  }
+
+  // ---
+  // NOTE: Create a vector that may be used by each thread.
+  // This vector will store a vector of fluffy-pixels ;-)
+  // ---
+  std::vector<std::vector<fluffy::fractal::pixel>> vvPixel{};
+
+  auto vT = std::vector<std::thread>(vBox.size());
+
+  for (size_t Idx = 0;    //!<
+       Idx < vBox.size(); //!<
+       ++Idx) {
+
+    auto const &Box = vBox.at(Idx);
+
+    auto ldaT = [&vvPixel, ldaCreateFractalJuliaSet,
+                 &io_mutex](box const &Box, Vector4 const &Resolution,
+                            Vector4 const &Constant) -> void {
+      std::vector<fluffy::fractal::pixel> vPixel{};
+      vPixel = ldaCreateFractalJuliaSet(Box, Resolution, Constant);
+      {
+        std::lock_guard<std::mutex> const lk(io_mutex);
+        if (!vPixel.empty()) {
+          vvPixel.push_back(vPixel);
+        }
+      }
+    };
+    vT.push_back(std::thread(ldaT, Box, Resolution, Constant));
+  }
+
+  for (size_t Idx = 0;  //!<
+       Idx < vT.size(); //!<
+       ++Idx) {
+    if (vT.at(Idx).joinable()) {
+      vT.at(Idx).join();
+    }
+  }
+
+  fluffy::fractal::config Config{Constant, RenderSize};
+  Config.vFractalPixels = vPixel;
+  Config.vvFractalPixels = vvPixel;
+
+#if 0
+  size_t TotalPixels{};
+  for (auto const &E : vvPixel) {
+    TotalPixels += E.size();
+  }
+
+  std::cout << "Num threads available is " << Nthreads
+            << ".\nRender size input :" << RenderSize
+            << ".\nRender size output:" << Config.Dimension
+            << ".\nConstant:" << Config.Constant
+            << ".\nNum points:" << vPixel.size()
+            << ".\nMultithreadedPixels       : " << TotalPixels
+            << ".\nEstimated number of pixels: "
+            << RenderSize.x * Resolution.x * RenderSize.y * Resolution.y
+            << std::endl;
+#endif
+
+  return Config;
+}
+
+}; // namespace fractal
+}; // namespace fluffy
 namespace {
 /**
  * Hold pixel position as integers, X and Y.
@@ -90,10 +345,14 @@ struct data {
   int n{5}; //!< Fourier series number of terms.
   float dt{};
   float t{};
+
+  std::mutex MutTrendPoints{};
   std::vector<Vector4> vTrendPoints{};
   size_t CurrentTrendPoint{};
   size_t NumTrendPoints{};
   grid_cfg GridCfg{};
+
+  fluffy::fractal::config FractalConfig{};
 
   Matrix MhE2P{}; //!< Homogenous matrix for conversion from engineering space
                   //!< to pixelspace.
@@ -120,6 +379,23 @@ struct data {
   };
   mouse_input MouseInput{};
 };
+
+/**
+ * Return vector containing the absolute value of the elements on the diagonal
+ * of a Matrix. Can be used for pulling out resolution.
+ */
+auto DiagVector(Matrix const &MhE2P) -> Vector4 {
+  return es::Vector(MhE2P.m0, MhE2P.m5, MhE2P.m10);
+}
+
+/**
+ * Return vector containing the absolute value of the elements on the diagonal
+ * of a Matrix. Can be used for pulling out resolution.
+ */
+auto DiagVectorAbs(Matrix const &MhE2P) -> Vector4 {
+  auto D = DiagVector(MhE2P);
+  return es::Vector(std::abs(D.x), std::abs(D.y), std::abs(D.z));
+}
 
 /*
  * Create lines and ticks for a grid in engineering units.
@@ -353,8 +629,8 @@ auto ldaDrawBox = [](Matrix const &MhE2P, Vector4 const &Pos,
 
   auto const PixPosStrt = MhE2P * Pos;
   auto const PixPosEnd = MhE2P * (Pos + Dim);
-  DrawLine(PixPosStrt.x, PixPosStrt.y, 0, 0, VIOLET); //!< Debug help line.
-  DrawLine(PixPosEnd.x, PixPosEnd.y, 0, 0, ORANGE);   //!< Debug help line.
+  // DrawLine(PixPosStrt.x, PixPosStrt.y, 0, 0, VIOLET); //!< Debug help line.
+  // DrawLine(PixPosEnd.x, PixPosEnd.y, 0, 0, ORANGE);   //!< Debug help line.
   DrawLine(PixPosStrt.x, PixPosStrt.y, PixPosEnd.x, PixPosStrt.y, C);
   DrawLine(PixPosEnd.x, PixPosStrt.y, PixPosEnd.x, PixPosEnd.y, C);
   DrawLine(PixPosStrt.x, PixPosStrt.y, PixPosStrt.x, PixPosEnd.y, C);
@@ -392,6 +668,17 @@ auto ldaDrawPoint = [](Matrix const &MhE2P, Vector4 const &Pos,
                  .c_str(),
              140, 70, 20, BLUE);
   }
+};
+
+// ---
+// NOTE: Lamda to draw a point. Actually it draws a small circle.
+// ---
+auto ldaDrawPixel = [](Matrix const &MhE2P, Vector4 const &Pos,
+                       Vector4 const &m2Pixel, bool Print = false,
+                       Color Col = BLUE, float Alpha = 1.f) -> void {
+  auto PixelPos = MhE2P * Pos;
+  // DrawPixel(PixelPos.x, PixelPos.y, ColorAlpha(Col, Alpha));
+  DrawPixel(PixelPos.x, PixelPos.y, Col);
 };
 
 /**
@@ -470,8 +757,7 @@ auto HandleInput(data *pData) -> bool {
 
   DrawText(std::string("Use arrow keys. Zoom: " +
                        std::to_string(pData->vPixelsPerUnit.x) +
-                       // ". CurrentTrendPoint :" +
-                       // std::to_string(pData->CurrentTrendPoint) +
+                       ". n :" + std::to_string(pData->n) +
                        ". Mouse: " + std::to_string(MousePos.x) + " " +
                        std::to_string(MousePos.y) +
                        ". Mouse Eng: " + std::to_string(pData->MousePosEng.x) +
@@ -521,6 +807,8 @@ auto HandleInput(data *pData) -> bool {
       InputChanged = true;
     } else if (KEY_R == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameFractal;
+      pData->NumTrendPoints = 0;
+      pData->CurrentTrendPoint = 0;
       InputChanged = true;
     } else if (KEY_L == pData->Key) {
       if (!pData->WikipediaLink.empty())
@@ -530,6 +818,20 @@ auto HandleInput(data *pData) -> bool {
       InputChanged = true;
     } else if (KEY_F2 == pData->Key) {
       pData->TakeScreenshot = true;
+    } else if (data::pages::PageFractal == pData->PageNum) {
+      if (KEY_F7 == pData->Key) {
+        pData->FractalConfig.Constant.x -= 0.01f;
+        InputChanged = true;
+      } else if (KEY_F8 == pData->Key) {
+        pData->FractalConfig.Constant.x += 0.01f;
+        InputChanged = true;
+      } else if (KEY_F9 == pData->Key) {
+        pData->FractalConfig.Constant.y -= 0.01f;
+        InputChanged = true;
+      } else if (KEY_F10 == pData->Key) {
+        pData->FractalConfig.Constant.y += 0.01f;
+        InputChanged = true;
+      }
     }
 
     pData->KeyPrv = pData->Key;
@@ -552,6 +854,12 @@ auto HandleInput(data *pData) -> bool {
                                       pData->vPixelsPerUnit.y;
 
     pData->GridCfg = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
+
+    if (data::pages::PageFractal == pData->PageNum) {
+      pData->FractalConfig = fluffy::fractal::CreateFractalVector(
+          pData->GridCfg.GridDimensions, pData->FractalConfig.Constant,
+          DiagVectorAbs(pData->MhE2P));
+    }
   }
 
   if (false && pData->MouseInput.MouseButtonReleased) {
@@ -700,13 +1008,41 @@ auto UpdateDrawFrameFractal(data *pData) -> void {
   }
 
   BeginDrawing();
-  ClearBackground(RAYWHITE);
+  ClearBackground(BLACK);
 
-  DrawText(std::string("Num terms: " + std::to_string(pData->n) +
-                       ". Key:" + std::to_string(pData->KeyPrv) +
-                       ". Time:" + std::to_string(pData->Xcalc))
-               .c_str(),
-           140, 40, 20, BLUE);
+  // ---
+  // NOTE: Render the fractal.
+  {
+    auto constexpr NoPrint = false;
+
+    // ---
+    // NOTE: Iterate over the vector of vector of pixels.
+    // ---
+    for (auto const &Evv : pData->FractalConfig.vvFractalPixels) {
+      for (auto const &Ev : Evv) {
+        auto Col = Ev.Col;
+        ldaDrawPixel(pData->MhE2P, pData->MhG2EInv * Ev.Pos,
+                     {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f}, NoPrint, Col,
+                     Ev.Col.a);
+      }
+    }
+    // for (auto const &E : pData->FractalConfig.vFractalPixels) {
+    //   auto Col = E.Col;
+    //   // Col.r = E.Col.a;
+    //   // Col.g = E.Col.a;
+    //   // Col.b = E.Col.a;
+    //   ldaDrawPixel(pData->MhE2P, pData->MhG2EInv * E.Pos,
+    //                {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f}, NoPrint,
+    //                Col, E.Col.a);
+    // }
+    ldaDrawText(
+        pData->MhE2P,
+        es::Point(pData->GridCfg.GridScreenCentre.x -
+                      pData->GridCfg.GridDimensions.x / 2.f,
+                  -(pData->GridCfg.GridDimensions.y / 2.f * 0.85f), 0.f),
+        std::string(std::to_string(pData->FractalConfig.Constant.x) + " " +
+                    std::to_string(pData->FractalConfig.Constant.y) + "j"));
+  }
 
   {
     ldaDrawText(pData->MhE2P,
@@ -731,6 +1067,11 @@ auto UpdateDrawFrameFractal(data *pData) -> void {
 
       ldaDrawBox(pData->MhE2P, BoxPosition, BoxDimension);
 
+      ldaDrawLine(pData->MhE2P, es::Point(-1.f, 0.f, 0.f),
+                  es::Point(-1.f, 2.f, 0.f));
+      ldaDrawLine(pData->MhE2P, es::Point(-1.01f, 0.f, 0.f),
+                  es::Point(-1.01f, 2.f, 0.f));
+
       if (pData->MouseInput.MouseButtonReleased)
         if (!pData->WikipediaLink.empty())
           OpenURL(pData->WikipediaLink.c_str());
@@ -746,16 +1087,16 @@ auto UpdateDrawFrameFractal(data *pData) -> void {
     auto const &GridD = pData->GridCfg.GridDimensions;
     auto const GridP = GridC - GridD * (1.f / 2.f);
 
-    ldaDrawBox(pData->MhE2P,
-               es::Point(pData->MousePosEng.x, pData->MousePosEng.y, 0.f),
-               GridD, RED);
+    // ldaDrawBox(pData->MhE2P,
+    //            es::Point(pData->MousePosEng.x, pData->MousePosEng.y, 0.f),
+    //            GridD, RED);
 
     if (pData->MousePosEng.x > (GridP.x) &&
         pData->MousePosEng.x < (GridP.x + GridD.x) &&
         pData->MousePosEng.y > (GridP.y) &&
         pData->MousePosEng.y < (GridP.y + GridD.y)) {
 
-      ldaDrawBox(pData->MhE2P, GridP, GridD, ORANGE);
+      // ldaDrawBox(pData->MhE2P, GridP, GridD, ORANGE);
 
       if (pData->MouseInput.MouseButtonReleased) {
         pData->GridCfg.GridOrigo =
@@ -768,6 +1109,29 @@ auto UpdateDrawFrameFractal(data *pData) -> void {
   }
 
   HandleInput(pData);
+
+  {
+    // ---
+    // NOTE: Add elements to be drawn.
+    // ---
+    // std::scoped_lock lock(pData->MutTrendPoints);
+    // if (pData->NumTrendPoints > 40000) {
+    //   pData->NumTrendPoints = 0;
+    //   pData->CurrentTrendPoint = 0;
+    // }
+    //
+    // pData->vTrendPoints[pData->CurrentTrendPoint] = pData->MousePosGrid;
+    // ++pData->CurrentTrendPoint;
+
+    // ---
+    // NOTE: Draw the points of the fractal.
+    // ---
+    // for (size_t Idx = 0;
+    //      Idx < std::min(pData->vTrendPoints.size(), size_t(40000)); ++Idx) {
+    //   ldaDrawPixel(pData->MhE2P, pData->MhG2EInv * pData->vTrendPoints[Idx],
+    //                {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f});
+    // }
+  }
 
   // ---
   // NOTE: Draw the grid.
@@ -977,6 +1341,8 @@ auto UpdateDrawFrameHelp(data *pData) -> void {
  */
 auto main(int argc, char const *argv[]) -> int {
 
+  SetTraceLogLevel(LOG_ALL);
+
   // ---
   // NOTE: Poor mans testing framework.
   // ---
@@ -1005,6 +1371,10 @@ auto main(int argc, char const *argv[]) -> int {
   Data.vHelpTextPage.push_back("g -  toggle Grid");
   Data.vHelpTextPage.push_back("l -  open current page's web Link");
   Data.vHelpTextPage.push_back("r -  fRactal");
+  Data.vHelpTextPage.push_back(
+      "On page fRactal - F7/F8 changes Constant Real value");
+  Data.vHelpTextPage.push_back(
+      "On page fRactal - F9/F10 changes Constant Imaginary value");
 
   // ---
   SetTargetFPS(60); // Set our game to run at X frames-per-second
@@ -1030,21 +1400,17 @@ auto main(int argc, char const *argv[]) -> int {
 
   Data.MhG2E = es::SetTranslation(es::Vector(0.f, 0.f, 0.f));
   Data.MhG2EInv = MatrixInvert(Data.MhG2E);
-  std::cout << Data.MhG2E;
-  std::cout << Data.MhG2EInv << std::endl;
-  std::cout << Data.MhG2E * Data.MhG2EInv << std::endl;
 
   if (es::IsMatrixInvertible(Data.MhE2P)) {
     Data.MhE2PInv = MatrixInvert(Data.MhE2P);
-    std::cout << "MatrixInvert: " << Data.MhE2PInv << std::endl;
-    std::cout << "Matrix      : " << Data.MhE2P << std::endl;
 
     auto const OrigoScreenInPixels =
         es::Point(Data.screenWidth / 2.f, Data.screenHeight / 2.f, 0.f);
 
-    std::cout << "Pixel Pos: " << OrigoScreenInPixels << std::endl;
-    std::cout << "Engin Pos: " << Data.MhE2PInv * OrigoScreenInPixels
-              << std::endl;
+    auto const EngPos = Data.MhE2PInv * OrigoScreenInPixels;
+
+    TraceLog(LOG_INFO, "Pixel Pos %i:%i is mapped from engineering Pos %f:%f",
+             OrigoScreenInPixels.x, OrigoScreenInPixels.y, EngPos.x, EngPos.y);
 
   } else {
     std::cerr << "The Homogenous matrix MhE2P is not invertible." << std::endl;
@@ -1058,6 +1424,13 @@ auto main(int argc, char const *argv[]) -> int {
   // NOTE: Construct the grid pattern.
   // ---
   Data.GridCfg = GridCfgInPixels(Data.MhE2P, Data.GridCfg);
+
+  // ---
+  // NOTE: Create a simple fractal before startup.
+  // ---
+  Data.FractalConfig = fluffy::fractal::CreateFractalVector(
+      Data.GridCfg.GridDimensions, es::Vector(-0.4f, 0.6f, 0.f),
+      DiagVectorAbs(Data.MhE2P));
 
   Data.UpdateDrawFramePointer = UpdateDrawFrameHelp;
 
