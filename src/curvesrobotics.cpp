@@ -469,6 +469,9 @@ auto ldaShowGrid = [](data* pData) -> void {
   }
 };
 
+/**
+ * Forward declarations.
+ */
 auto UpdateDrawFrameFourier(data* pData) -> void;
 auto UpdateDrawFrameFractal(data* pData) -> void;
 auto UpdateDrawFrameAsteroid(data* pData) -> void;
@@ -831,15 +834,13 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
       ldaDrawBox(pData->MhE2P, GridP, GridD, ORANGE);
 
       if (pData->MouseInput.MouseButtonReleased) {
-        // pData->GridCfg.GridOrigo = pData->GridCfg.GridOrigo + pData->MousePosEng;
         pData->GridCfg.GridOrigo = pData->MousePosEng;
         pData->MhG2E             = es::SetTranslation(pData->GridCfg.GridOrigo);
-        // pData->MhG2E             = es::SetTranslation(pData->MousePosGrid);
-        pData->MhG2EInv = MatrixInvert(pData->MhG2E);
-        pData->GridCfg  = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
-
+        pData->MhG2EInv          = MatrixInvert(pData->MhG2E);
+        pData->GridCfg           = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
         auto const GridLowerLeft = pData->GridCfg.GridOrigo - pData->GridCfg.GridDimensions * 0.5f;
-        pData->FractalConfig     = fluffy::fractal::CreateFractalVector(
+
+        pData->FractalConfig = fluffy::fractal::CreateFractalVector(
             GridLowerLeft, pData->GridCfg.GridDimensions, pData->FractalConfig.Constant, DiagVectorAbs(pData->MhE2P));
       }
     }
