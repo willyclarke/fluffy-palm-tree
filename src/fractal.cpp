@@ -123,7 +123,7 @@ auto CreateFractalVector(Vector4 const& StartPos,
         auto const Pos = es::Point(X, Y, 0.f);
 
         // Compute the pixel color.
-        auto constexpr MaxIterations = 1000;
+        auto constexpr MaxIterations = 500;
         auto const Iterations        = ComputeIterations(Pos, Constant, MaxIterations);
         vPixelCfg.push_back(ldaSetPixelColor(Pos, Iterations, MaxIterations));
         MaxRegisteredIterations = std::max(MaxRegisteredIterations, Iterations);

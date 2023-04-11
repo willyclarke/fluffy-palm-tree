@@ -517,17 +517,29 @@ auto HandleInput(data* pData) -> bool {
     } else if (KEY_DOWN == pData->Key) {
 
       auto& vPPU = pData->vPixelsPerUnit;
-      vPPU.x     = std::max(vPPU.x / 1.5f, MinPixelPerUnit);
-      vPPU.y     = std::max(vPPU.y / 1.5f, MinPixelPerUnit);
-      vPPU.z     = std::max(vPPU.z / 1.5f, MinPixelPerUnit);
+      if (data::pages::PageFractal == pData->PageNum) {
+        vPPU.x = std::max(vPPU.x / 1.5f, MinPixelPerUnit);
+        vPPU.y = std::max(vPPU.y / 1.5f, MinPixelPerUnit);
+        vPPU.z = std::max(vPPU.z / 1.5f, MinPixelPerUnit);
+      } else {
+        vPPU.x = std::max(vPPU.x - 10.f, MinPixelPerUnit);
+        vPPU.y = std::max(vPPU.y - 10.f, MinPixelPerUnit);
+        vPPU.z = std::max(vPPU.z - 10.f, MinPixelPerUnit);
+      }
 
       InputChanged = true;
     } else if (KEY_UP == pData->Key) {
 
       auto& vPPU = pData->vPixelsPerUnit;
-      vPPU.x     = std::min(MaxPixelPerUnit, vPPU.x * 1.5f);
-      vPPU.y     = std::min(MaxPixelPerUnit, vPPU.y * 1.5f);
-      vPPU.z     = std::min(MaxPixelPerUnit, vPPU.z * 1.5f);
+      if (data::pages::PageFractal == pData->PageNum) {
+        vPPU.x = std::min(MaxPixelPerUnit, vPPU.x * 1.5f);
+        vPPU.y = std::min(MaxPixelPerUnit, vPPU.y * 1.5f);
+        vPPU.z = std::min(MaxPixelPerUnit, vPPU.z * 1.5f);
+      } else {
+        vPPU.x = std::min(MaxPixelPerUnit, vPPU.x + 10.f);
+        vPPU.y = std::min(MaxPixelPerUnit, vPPU.y + 10.f);
+        vPPU.z = std::min(MaxPixelPerUnit, vPPU.z + 10.f);
+      }
 
       InputChanged = true;
     } else if (KEY_LEFT == pData->Key) {
@@ -549,13 +561,16 @@ auto HandleInput(data* pData) -> bool {
     } else if (KEY_A == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameAsteroid;
       InputChanged                  = true;
+      pData->vPixelsPerUnit         = es::Vector(100.f, 100.f, 100.f);
     } else if (KEY_F == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameFourier;
+      pData->vPixelsPerUnit         = es::Vector(100.f, 100.f, 100.f);
       InputChanged                  = true;
     } else if (KEY_R == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameFractal;
       pData->NumTrendPoints         = 0;
       pData->CurrentTrendPoint      = 0;
+      pData->vPixelsPerUnit         = es::Vector(100.f, 100.f, 100.f);
       InputChanged                  = true;
     } else if (KEY_L == pData->Key) {
       if (!pData->WikipediaLink.empty())
@@ -619,8 +634,9 @@ auto HandleInput(data* pData) -> bool {
 auto UpdateDrawFrameFourier(data* pData) -> void {
 
   if (data::pages::PageFourier != pData->PageNum) {
-    pData->WikipediaLink = "https://en.wikipedia.org/wiki/Square_wave";
-    pData->PageNum       = data::pages::PageFourier;
+    pData->vPixelsPerUnit = es::Vector(100.f, 100.f, 100.f);
+    pData->WikipediaLink  = "https://en.wikipedia.org/wiki/Square_wave";
+    pData->PageNum        = data::pages::PageFourier;
   }
 
   BeginDrawing();
@@ -807,7 +823,7 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
     auto const& GridD = pData->GridCfg.GridDimensions;
     auto const  GridP = GridC - GridD * (1.f / 2.f);
 
-    ldaDrawBox(pData->MhE2P, es::Point(pData->MousePosEng.x, pData->MousePosEng.y, 0.f), GridD, RED);
+    // ldaDrawBox(pData->MhE2P, es::Point(pData->MousePosEng.x, pData->MousePosEng.y, 0.f), GridD, RED);
 
     if (pData->MousePosEng.x > (GridP.x) && pData->MousePosEng.x < (GridP.x + GridD.x) &&
         pData->MousePosEng.y > (GridP.y) && pData->MousePosEng.y < (GridP.y + GridD.y)) {
