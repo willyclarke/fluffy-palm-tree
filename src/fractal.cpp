@@ -35,10 +35,8 @@ auto ComputeIterations(Vector4 const& Z0, Vector4 const& Constant, int MaxIterat
   }
 
   // Create a smooth iteration count.
-  auto const Mod             = std::sqrtf(Mod2(Zn));
+  auto const Mod             = std::sqrt(Mod2(Zn));
   auto const SmoothIteration = float(Iteration) - std::log2f(std::max(1.f, std::log2f(Mod)));
-  // std::cout << "SmoothIteration:" << SmoothIteration
-  //           << ". Iteration:" << Iteration << Z0 << " " << Zn << std::endl;
 
   return SmoothIteration;
 }
