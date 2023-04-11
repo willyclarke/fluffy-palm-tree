@@ -507,6 +507,7 @@ auto HandleInput(data* pData) -> bool {
   bool InputChanged{};
 
   constexpr float MinPixelPerUnit = 50.f;
+  constexpr float MaxPixelPerUnit = 10000.f;
   auto const      PixelPerUnitPrv = pData->vPixelsPerUnit;
 
   if (pData->Key) {
@@ -516,17 +517,17 @@ auto HandleInput(data* pData) -> bool {
     } else if (KEY_DOWN == pData->Key) {
 
       auto& vPPU = pData->vPixelsPerUnit;
-      vPPU.x     = std::max(vPPU.x - 10.f, MinPixelPerUnit);
-      vPPU.y     = std::max(vPPU.y - 10.f, MinPixelPerUnit);
-      vPPU.z     = std::max(vPPU.z - 10.f, MinPixelPerUnit);
+      vPPU.x     = std::max(vPPU.x / 1.5f, MinPixelPerUnit);
+      vPPU.y     = std::max(vPPU.y / 1.5f, MinPixelPerUnit);
+      vPPU.z     = std::max(vPPU.z / 1.5f, MinPixelPerUnit);
 
       InputChanged = true;
     } else if (KEY_UP == pData->Key) {
 
       auto& vPPU = pData->vPixelsPerUnit;
-      vPPU.x     = std::max(vPPU.x + 10.f, MinPixelPerUnit);
-      vPPU.y     = std::max(vPPU.y + 10.f, MinPixelPerUnit);
-      vPPU.z     = std::max(vPPU.z + 10.f, MinPixelPerUnit);
+      vPPU.x     = std::min(MaxPixelPerUnit, vPPU.x * 1.5f);
+      vPPU.y     = std::min(MaxPixelPerUnit, vPPU.y * 1.5f);
+      vPPU.z     = std::min(MaxPixelPerUnit, vPPU.z * 1.5f);
 
       InputChanged = true;
     } else if (KEY_LEFT == pData->Key) {
@@ -597,8 +598,9 @@ auto HandleInput(data* pData) -> bool {
     pData->GridCfg = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
 
     if (data::pages::PageFractal == pData->PageNum) {
-      pData->FractalConfig = fluffy::fractal::CreateFractalVector(
-          pData->GridCfg.GridDimensions, pData->FractalConfig.Constant, DiagVectorAbs(pData->MhE2P));
+      auto const GridLowerLeft = pData->GridCfg.GridOrigo - pData->GridCfg.GridDimensions * 0.5f;
+      pData->FractalConfig     = fluffy::fractal::CreateFractalVector(
+          GridLowerLeft, pData->GridCfg.GridDimensions, pData->FractalConfig.Constant, DiagVectorAbs(pData->MhE2P));
     }
   }
 
@@ -805,7 +807,7 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
     auto const& GridD = pData->GridCfg.GridDimensions;
     auto const  GridP = GridC - GridD * (1.f / 2.f);
 
-    // ldaDrawBox(pData->MhE2P, es::Point(pData->MousePosEng.x, pData->MousePosEng.y, 0.f), GridD, RED);
+    ldaDrawBox(pData->MhE2P, es::Point(pData->MousePosEng.x, pData->MousePosEng.y, 0.f), GridD, RED);
 
     if (pData->MousePosEng.x > (GridP.x) && pData->MousePosEng.x < (GridP.x + GridD.x) &&
         pData->MousePosEng.y > (GridP.y) && pData->MousePosEng.y < (GridP.y + GridD.y)) {
@@ -813,10 +815,16 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
       ldaDrawBox(pData->MhE2P, GridP, GridD, ORANGE);
 
       if (pData->MouseInput.MouseButtonReleased) {
-        pData->GridCfg.GridOrigo = pData->GridCfg.GridOrigo + pData->MousePosEng;
-        pData->GridCfg           = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
-        pData->MhG2E             = es::SetTranslation(pData->MousePosGrid);
-        pData->MhG2EInv          = MatrixInvert(pData->MhG2E);
+        // pData->GridCfg.GridOrigo = pData->GridCfg.GridOrigo + pData->MousePosEng;
+        pData->GridCfg.GridOrigo = pData->MousePosEng;
+        pData->MhG2E             = es::SetTranslation(pData->GridCfg.GridOrigo);
+        // pData->MhG2E             = es::SetTranslation(pData->MousePosGrid);
+        pData->MhG2EInv = MatrixInvert(pData->MhG2E);
+        pData->GridCfg  = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
+
+        auto const GridLowerLeft = pData->GridCfg.GridOrigo - pData->GridCfg.GridDimensions * 0.5f;
+        pData->FractalConfig     = fluffy::fractal::CreateFractalVector(
+            GridLowerLeft, pData->GridCfg.GridDimensions, pData->FractalConfig.Constant, DiagVectorAbs(pData->MhE2P));
       }
     }
   }
@@ -1110,8 +1118,9 @@ auto main(int argc, char const* argv[]) -> int {
   // ---
   // NOTE: Create a simple fractal before startup.
   // ---
-  Data.FractalConfig = fluffy::fractal::CreateFractalVector(
-      Data.GridCfg.GridDimensions, es::Vector(-0.4f, 0.6f, 0.f), DiagVectorAbs(Data.MhE2P));
+  auto const GridLowerLeft = pData->GridCfg.GridOrigo - pData->GridCfg.GridDimensions * 0.5f;
+  Data.FractalConfig       = fluffy::fractal::CreateFractalVector(
+      GridLowerLeft, Data.GridCfg.GridDimensions, es::Vector(-0.4f, 0.6f, 0.f), DiagVectorAbs(Data.MhE2P));
 
   Data.UpdateDrawFramePointer = UpdateDrawFrameHelp;
 

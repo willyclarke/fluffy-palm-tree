@@ -21,8 +21,10 @@ struct config {
   std::vector<std::vector<fluffy::fractal::pixel>> vvFractalPixels{};
 };
 
-auto CreateFractalVector(Vector4 const& RenderSize, Vector4 const& Constant, Vector4 const& Resolution)
-    -> fluffy::fractal::config;
+auto CreateFractalVector(Vector4 const& StartPos,
+                         Vector4 const& RenderSize,
+                         Vector4 const& Constant,
+                         Vector4 const& Resolution) -> fluffy::fractal::config;
 
 }; // namespace fractal
 }; // namespace fluffy

@@ -41,7 +41,7 @@ auto ComputeIterations(Vector4 const& Z0, Vector4 const& Constant, int MaxIterat
   return SmoothIteration;
 }
 
-};// end of anonymous namespace
+}; // end of anonymous namespace
 
 namespace fluffy {
 namespace fractal {
@@ -75,8 +75,10 @@ auto Render(Vector4 const &RenderSize, Vector4 const &Constant) -> void {
  * TODO: (Willy Clarke) : Get hold of the pixelsize and set the increment
  * accordingly.
  */
-auto CreateFractalVector(Vector4 const& RenderSize, Vector4 const& Constant, Vector4 const& Resolution)
-    -> fluffy::fractal::config {
+auto CreateFractalVector(Vector4 const& StartPos,
+                         Vector4 const& RenderSize,
+                         Vector4 const& Constant,
+                         Vector4 const& Resolution) -> fluffy::fractal::config {
 
   auto ldaSetPixelColor = [](Vector4 const& Pos, int Iterations, int MaxIterations) -> fluffy::fractal::pixel {
     fluffy::fractal::pixel Result{};
@@ -84,7 +86,12 @@ auto CreateFractalVector(Vector4 const& RenderSize, Vector4 const& Constant, Vec
     Result.Col.r = 0xFF & Iterations;
     Result.Col.g = 0xFF & (Iterations >> 8);
     Result.Col.b = 0xFF & (Iterations >> 16);
-    Result.Col.a = 0xFF & int(255.f - float(255.f * float(Iterations) / float(MaxIterations)));
+#define INVERT_ALPACHANNEL 1
+#if INVERT_ALPACHANNEL
+    Result.Col.a = 0xFF & (unsigned char)(255.f - float(255.f * float(Iterations) / float(MaxIterations)));
+#else
+    Result.Col.a = 0xFF & (unsigned char)(float(255.f * float(Iterations) / float(MaxIterations)));
+#endif
 
     return Result;
   };
@@ -116,7 +123,7 @@ auto CreateFractalVector(Vector4 const& RenderSize, Vector4 const& Constant, Vec
         auto const Pos = es::Point(X, Y, 0.f);
 
         // Compute the pixel color.
-        auto constexpr MaxIterations = 500;
+        auto constexpr MaxIterations = 1000;
         auto const Iterations        = ComputeIterations(Pos, Constant, MaxIterations);
         vPixelCfg.push_back(ldaSetPixelColor(Pos, Iterations, MaxIterations));
         MaxRegisteredIterations = std::max(MaxRegisteredIterations, Iterations);
@@ -145,8 +152,6 @@ auto CreateFractalVector(Vector4 const& RenderSize, Vector4 const& Constant, Vec
     return vPixelCfg;
   };
 
-  auto const Start = es::Vector(-RenderSize.x, -RenderSize.y, 0.f) * 0.5f;
-
   // ---
   // NOTE: Set up Nthreads and give a block of the fractal to compute per.
   // available thread.
@@ -167,7 +172,7 @@ auto CreateFractalVector(Vector4 const& RenderSize, Vector4 const& Constant, Vec
          ++Idx) {
 
       box Box{};
-      Box.LowerLeft  = Start + es::Vector(Idx * BlockSize.x, Jdx * BlockSize.y, 0.f);
+      Box.LowerLeft  = StartPos + es::Vector(Idx * BlockSize.x, Jdx * BlockSize.y, 0.f);
       Box.UpperRigth = Box.LowerLeft + BlockSize;
       Box.Idx        = vBox.size();
       vBox.push_back(Box);
