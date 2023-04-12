@@ -128,21 +128,6 @@ struct data {
   mouse_input MouseInput{};
 };
 
-/**
- * Return vector containing the absolute value of the elements on the diagonal
- * of a Matrix. Can be used for pulling out resolution.
- */
-auto DiagVector(Matrix const& MhE2P) -> Vector4 { return es::Vector(MhE2P.m0, MhE2P.m5, MhE2P.m10); }
-
-/**
- * Return vector containing the absolute value of the elements on the diagonal
- * of a Matrix. Can be used for pulling out resolution.
- */
-auto DiagVectorAbs(Matrix const& MhE2P) -> Vector4 {
-  auto D = DiagVector(MhE2P);
-  return es::Vector(std::abs(D.x), std::abs(D.y), std::abs(D.z));
-}
-
 /*
  * Create lines and ticks for a grid in engineering units.
  */
@@ -618,7 +603,7 @@ auto HandleInput(data* pData) -> bool {
     if (data::pages::PageFractal == pData->PageNum) {
       auto const GridLowerLeft = pData->GridCfg.GridOrigo - pData->GridCfg.GridDimensions * 0.5f;
       pData->FractalConfig     = fluffy::fractal::CreateFractalVector(
-          GridLowerLeft, pData->GridCfg.GridDimensions, pData->FractalConfig.Constant, DiagVectorAbs(pData->MhE2P));
+          GridLowerLeft, pData->GridCfg.GridDimensions, pData->FractalConfig.Constant, es::DiagVectorAbs(pData->MhE2P));
     }
   }
 
@@ -840,8 +825,10 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
         pData->GridCfg           = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
         auto const GridLowerLeft = pData->GridCfg.GridOrigo - pData->GridCfg.GridDimensions * 0.5f;
 
-        pData->FractalConfig = fluffy::fractal::CreateFractalVector(
-            GridLowerLeft, pData->GridCfg.GridDimensions, pData->FractalConfig.Constant, DiagVectorAbs(pData->MhE2P));
+        pData->FractalConfig = fluffy::fractal::CreateFractalVector(GridLowerLeft,
+                                                                    pData->GridCfg.GridDimensions,
+                                                                    pData->FractalConfig.Constant,
+                                                                    es::DiagVectorAbs(pData->MhE2P));
       }
     }
   }
@@ -1137,7 +1124,7 @@ auto main(int argc, char const* argv[]) -> int {
   // ---
   auto const GridLowerLeft = pData->GridCfg.GridOrigo - pData->GridCfg.GridDimensions * 0.5f;
   Data.FractalConfig       = fluffy::fractal::CreateFractalVector(
-      GridLowerLeft, Data.GridCfg.GridDimensions, es::Vector(-0.4f, 0.6f, 0.f), DiagVectorAbs(Data.MhE2P));
+      GridLowerLeft, Data.GridCfg.GridDimensions, es::Vector(-0.4f, 0.6f, 0.f), es::DiagVectorAbs(Data.MhE2P));
 
   Data.UpdateDrawFramePointer = UpdateDrawFrameHelp;
 
