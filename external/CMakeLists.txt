@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.25) # FetchContent seems to work with 3.25
 
+include(FetchContent)
+
 # Dependencies
 set(RAYLIB_VERSION 4.5.0)
 find_package(raylib ${RAYLIB_VERSION} QUIET) # QUIET or REQUIRED
@@ -19,3 +21,12 @@ if (NOT raylib_FOUND) # If there's none, fetch and build raylib
   endif()
 endif()
 
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        9a2a4eadc0e50e0534278010624eac15991413a7
+  FIND_PACKAGE_ARGS
+)
+
+# This will try calling find_package() first for both dependencies
+FetchContent_MakeAvailable(Catch2)
