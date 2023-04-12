@@ -36,8 +36,8 @@ namespace {
 /*
  * Create lines and ticks for a grid in engineering units.
  */
-auto GridCfgInPixels(Matrix const&   MhE2P, //!< Homogenous matrix from
-                     grid_cfg const& GridCfg) -> grid_cfg {
+auto GridCfgInPixels(Matrix const&           MhE2P, //!< Homogenous matrix from
+                     currob::grid_cfg const& GridCfg) -> currob::grid_cfg {
 
   auto Result = GridCfg;
   Result.vGridLines.clear();
@@ -185,9 +185,9 @@ auto GridCfgInPixels(Matrix const&   MhE2P, //!< Homogenous matrix from
     // ---
     // NOTE: Create the axis tag based on the setup from the grid.
     // ---
-    auto const& TagX     = Elem.TagX ? ldaFloat2Str((MhG2E * es::Point(Elem.fromX, 0.f, 0.f)).x) : "";
-    auto const& TagY     = Elem.TagY ? ldaFloat2Str((MhG2E * es::Point(0.f, Elem.fromY, 0.f)).y) : "";
-    pixel_pos   PixelPos = {int(ToPixel.x), int(ToPixel.y), DARKGRAY, TagX, TagY};
+    auto const&       TagX     = Elem.TagX ? ldaFloat2Str((MhG2E * es::Point(Elem.fromX, 0.f, 0.f)).x) : "";
+    auto const&       TagY     = Elem.TagY ? ldaFloat2Str((MhG2E * es::Point(0.f, Elem.fromY, 0.f)).y) : "";
+    currob::pixel_pos PixelPos = {int(ToPixel.x), int(ToPixel.y), DARKGRAY, TagX, TagY};
 
     Result.vGridLines.push_back(PixelPos);
     Result.vGridLines.push_back({int(FromPixel.x), int(FromPixel.y), DARKGRAY});
@@ -344,7 +344,7 @@ auto ldaDrawLine = [](Matrix const& MhE2P, Vector4 const& From, Vector4 const& T
 /**
  * Function to show the grid.
  */
-auto ldaShowGrid = [](data* pData) -> void {
+auto ldaShowGrid = [](currob::data* pData) -> void {
   for (size_t Idx = 0; Idx < pData->GridCfg.vGridLines.size(); Idx += 2) {
     auto const& Elem0 = pData->GridCfg.vGridLines[Idx];
     auto const& Elem1 = pData->GridCfg.vGridLines[Idx + 1];
@@ -362,15 +362,15 @@ auto ldaShowGrid = [](data* pData) -> void {
 /**
  * Forward declarations.
  */
-auto UpdateDrawFrameFourier(data* pData) -> void;
-auto UpdateDrawFrameFractal(data* pData) -> void;
-auto UpdateDrawFrameAsteroid(data* pData) -> void;
-auto UpdateDrawFrameHelp(data* pData) -> void;
+auto UpdateDrawFrameFourier(currob::data* pData) -> void;
+auto UpdateDrawFrameFractal(currob::data* pData) -> void;
+auto UpdateDrawFrameAsteroid(currob::data* pData) -> void;
+auto UpdateDrawFrameHelp(currob::data* pData) -> void;
 
 /**
  * Keyboard input handling common to all the drawing routines.
  */
-auto HandleInput(data* pData) -> bool {
+auto HandleInput(currob::data* pData) -> bool {
 
   auto const MousePos = GetMousePosition();
   pData->MousePosEng  = pData->MhE2PInv * es::Point(MousePos.x, MousePos.y, 0.f);
@@ -410,7 +410,7 @@ auto HandleInput(data* pData) -> bool {
     } else if (KEY_DOWN == pData->Key) {
 
       auto& vPPU = pData->vPixelsPerUnit;
-      if (data::pages::PageFractal == pData->PageNum) {
+      if (currob::data::pages::PageFractal == pData->PageNum) {
         vPPU.x = std::max(vPPU.x / 1.5f, MinPixelPerUnit);
         vPPU.y = std::max(vPPU.y / 1.5f, MinPixelPerUnit);
         vPPU.z = std::max(vPPU.z / 1.5f, MinPixelPerUnit);
@@ -424,7 +424,7 @@ auto HandleInput(data* pData) -> bool {
     } else if (KEY_UP == pData->Key) {
 
       auto& vPPU = pData->vPixelsPerUnit;
-      if (data::pages::PageFractal == pData->PageNum) {
+      if (currob::data::pages::PageFractal == pData->PageNum) {
         vPPU.x = std::min(MaxPixelPerUnit, vPPU.x * 1.5f);
         vPPU.y = std::min(MaxPixelPerUnit, vPPU.y * 1.5f);
         vPPU.z = std::min(MaxPixelPerUnit, vPPU.z * 1.5f);
@@ -442,7 +442,7 @@ auto HandleInput(data* pData) -> bool {
       ++pData->n;
       InputChanged = true;
     } else if (KEY_SPACE == pData->Key) {
-      if (data::pages::PageFractal == pData->PageNum) {
+      if (currob::data::pages::PageFractal == pData->PageNum) {
         auto& vPPU = pData->vPixelsPerUnit;
         vPPU.x     = std::max(100.f, MinPixelPerUnit);
         vPPU.y     = std::max(100.f, MinPixelPerUnit);
@@ -473,7 +473,7 @@ auto HandleInput(data* pData) -> bool {
       InputChanged                  = true;
     } else if (KEY_F2 == pData->Key) {
       pData->TakeScreenshot = true;
-    } else if (data::pages::PageFractal == pData->PageNum) {
+    } else if (currob::data::pages::PageFractal == pData->PageNum) {
       if (KEY_F7 == pData->Key) {
         pData->FractalConfig.Constant.x -= 0.01f;
         InputChanged = true;
@@ -505,7 +505,7 @@ auto HandleInput(data* pData) -> bool {
 
     pData->GridCfg = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
 
-    if (data::pages::PageFractal == pData->PageNum) {
+    if (currob::data::pages::PageFractal == pData->PageNum) {
       auto const GridLowerLeft = pData->GridCfg.GridOrigo - pData->GridCfg.GridDimensions * 0.5f;
       pData->FractalConfig     = fluffy::fractal::CreateFractalVector(
           GridLowerLeft, pData->GridCfg.GridDimensions, pData->FractalConfig.Constant, es::DiagVectorAbs(pData->MhE2P));
@@ -524,12 +524,12 @@ auto HandleInput(data* pData) -> bool {
 /**
  * Draw an animation of n - terms of a Fourier square wave.
  */
-auto UpdateDrawFrameFourier(data* pData) -> void {
+auto UpdateDrawFrameFourier(currob::data* pData) -> void {
 
-  if (data::pages::PageFourier != pData->PageNum) {
+  if (currob::data::pages::PageFourier != pData->PageNum) {
     pData->vPixelsPerUnit = es::Vector(100.f, 100.f, 100.f);
     pData->WikipediaLink  = "https://en.wikipedia.org/wiki/Square_wave";
-    pData->PageNum        = data::pages::PageFourier;
+    pData->PageNum        = currob::data::pages::PageFourier;
   }
 
   BeginDrawing();
@@ -644,11 +644,11 @@ auto UpdateDrawFrameFourier(data* pData) -> void {
 /**
  * Draw a Fractal.
  */
-auto UpdateDrawFrameFractal(data* pData) -> void {
+auto UpdateDrawFrameFractal(currob::data* pData) -> void {
 
-  if (data::pages::PageFractal != pData->PageNum) {
+  if (currob::data::pages::PageFractal != pData->PageNum) {
     pData->WikipediaLink = "https://en.wikipedia.org/wiki/Fractal";
-    pData->PageNum       = data::pages::PageFractal;
+    pData->PageNum       = currob::data::pages::PageFractal;
   }
 
   BeginDrawing();
@@ -760,11 +760,11 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
  * Draw an animation of the Asteroid parametric equation.
  * link: https://en.wikipedia.org/wiki/Astroid
  */
-auto UpdateDrawFrameAsteroid(data* pData) -> void {
+auto UpdateDrawFrameAsteroid(currob::data* pData) -> void {
 
-  if (data::pages::PageAsteroid != pData->PageNum) {
+  if (currob::data::pages::PageAsteroid != pData->PageNum) {
     pData->WikipediaLink = "https://en.wikipedia.org/wiki/Astroid";
-    pData->PageNum       = data::pages::PageAsteroid;
+    pData->PageNum       = currob::data::pages::PageAsteroid;
   }
 
   BeginDrawing();
@@ -904,11 +904,11 @@ auto UpdateDrawFrameAsteroid(data* pData) -> void {
 /**
  * Display a page with some help text.
  */
-auto UpdateDrawFrameHelp(data* pData) -> void {
+auto UpdateDrawFrameHelp(currob::data* pData) -> void {
 
-  if (data::pages::PageHelp != pData->PageNum) {
+  if (currob::data::pages::PageHelp != pData->PageNum) {
     pData->WikipediaLink = "";
-    pData->PageNum       = data::pages::PageHelp;
+    pData->PageNum       = currob::data::pages::PageHelp;
   }
 
   BeginDrawing();
@@ -956,7 +956,7 @@ auto main(int argc, char const* argv[]) -> int {
     return 0;
   }
 
-  data Data{};
+  currob::data Data{};
   Data.vTrendPoints.resize(size_t(Data.screenWidth * Data.screenHeight));
   auto pData = &Data;
 
