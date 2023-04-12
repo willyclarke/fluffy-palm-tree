@@ -209,7 +209,7 @@ auto GridCfgInPixels(Matrix const&   MhE2P, //!< Homogenous matrix from
   // ---
   // NOTE: Create ticks along the horizontal axis.
   // ---
-  for (size_t Idx = 0; Idx < int(NumTicksX); ++Idx) {
+  for (int Idx = 0; Idx < int(NumTicksX); ++Idx) {
     auto const PosX0 = GridXLowerLeft + float(Idx) * TickDistance;
     auto const PosX1 = PosX0;
     auto const PosY0 = GridYLowerLeft + GridHeight / 2.f;
@@ -235,7 +235,7 @@ auto GridCfgInPixels(Matrix const&   MhE2P, //!< Homogenous matrix from
   // ---
   // NOTE: Create ticks along the vertical axis.
   // ---
-  for (size_t Idx = 0; Idx < int(NumTicksY); ++Idx) {
+  for (int Idx = 0; Idx < int(NumTicksY); ++Idx) {
     float const PosX0 = GridXLowerLeft + GridLength / 2.f;
     float const PosX1 = PosX0 + TickDistance / 2.f;
     float const PosY0 = GridYLowerLeft + float(Idx) * TickDistance;
