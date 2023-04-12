@@ -9,13 +9,14 @@
  * MIT License - see bottom of file.
  */
 
-#include "raylib.h"
 #include "fractal.hpp"
+#include "raylib.h"
 
 #include <mutex>
 #include <string>
 #include <vector>
 
+namespace currob {
 /**
  * Hold pixel position as integers, X and Y.
  */
@@ -112,6 +113,7 @@ struct data {
   mouse_input MouseInput{};
 };
 
+}; // namespace currob
 
 #endif
 /**
