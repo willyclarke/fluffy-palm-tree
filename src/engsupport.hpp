@@ -32,7 +32,7 @@ Matrix I();
 /**
  * Compute the determinant and check it to find out if matrix is invertible.
  */
-bool IsMatrixInvertible(Matrix const &In);
+bool IsMatrixInvertible(Matrix const& In);
 
 //------------------------------------------------------------------------------
 /**
@@ -40,12 +40,12 @@ bool IsMatrixInvertible(Matrix const &In);
  * Screen space is a floating point representation with x,y,z = 0,0,0 beeing at
  * the middle of the window.
  */
-Matrix InitTranslationInv(Matrix const &M, Vector4 const &vTranslation);
+Matrix InitTranslationInv(Matrix const& M, Vector4 const& vTranslation);
 
 /**
  * Use a Homogenous matrix to store a translation.
  */
-auto SetTranslation(Vector4 const &Origo) -> Matrix;
+auto SetTranslation(Vector4 const& Origo) -> Matrix;
 
 /**
  * Defintions: A point in 3D space has w set to 1.
@@ -71,47 +71,50 @@ Vector4 Vector(float X, float Y, float Z);
  * Screen space is a floating point representation with x,y,z = 0,0,0 beeing at
  * the middle of the window.
  */
-Matrix InitScaling(Matrix const &M, Vector4 const &Scale,
-                   bool Reflection = false);
+Matrix InitScaling(Matrix const& M, Vector4 const& Scale, bool Reflection = false);
 
 /**
  * Return the result of multiplication of a Matrix and a Vector, dimension 4.
  */
-Vector4 Mul(Matrix const &M, Vector4 const &V);
+Vector4 Mul(Matrix const& M, Vector4 const& V);
 
 //------------------------------------------------------------------------------
-float Mul(Vector4 const &V1, Vector4 const &V2);
+float Mul(Vector4 const& V1, Vector4 const& V2);
 
 //------------------------------------------------------------------------------
-Vector4 Mul(Vector4 const &V1, float t);
+Vector4 Mul(Vector4 const& V1, float t);
 
 //------------------------------------------------------------------------------
-Matrix Add(Matrix const &M1, Matrix const &M2);
+Matrix Add(Matrix const& M1, Matrix const& M2);
 
 //------------------------------------------------------------------------------
-bool Eq(Matrix const &M1, Matrix const &M2);
+bool Eq(Matrix const& M1, Matrix const& M2);
 
 //------------------------------------------------------------------------------
-Vector4 Lerp(Vector4 const &A, Vector4 const &B, float t);
+Vector4 Lerp(Vector4 const& A, Vector4 const& B, float t);
 
 //------------------------------------------------------------------------------
-Matrix Mul(Matrix const &M1, Matrix const &M2);
+Matrix Mul(Matrix const& M1, Matrix const& M2);
 
 //------------------------------------------------------------------------------
-void Assert(bool Condition, char const *pCaller, int Line = 0);
+void Assert(bool Condition, char const* pCaller, int Line = 0);
+
+//------------------------------------------------------------------------------
+auto DiagVector(Matrix const& MhE2P) -> Vector4;
+auto DiagVectorAbs(Matrix const& MhE2P) -> Vector4;
 }; // namespace es
 
-Matrix operator*(Matrix const &M1, Matrix const &M2);
-Matrix operator+(Matrix const &M1, Matrix const &M2);
-bool operator==(Matrix const &M1, Matrix const &M2);
-bool operator!=(Matrix const &M1, Matrix const &M2);
-Vector4 operator*(Matrix const &M, Vector4 const &V);
-float operator*(Vector4 const &V1, Vector4 const &V2);
-Vector4 operator*(Vector4 const &V1, float t);
-Vector4 operator+(Vector4 const &V1, Vector4 const &V2);
-Vector4 operator-(Vector4 const &V1, Vector4 const &V2);
+Matrix  operator*(Matrix const& M1, Matrix const& M2);
+Matrix  operator+(Matrix const& M1, Matrix const& M2);
+bool    operator==(Matrix const& M1, Matrix const& M2);
+bool    operator!=(Matrix const& M1, Matrix const& M2);
+Vector4 operator*(Matrix const& M, Vector4 const& V);
+float   operator*(Vector4 const& V1, Vector4 const& V2);
+Vector4 operator*(Vector4 const& V1, float t);
+Vector4 operator+(Vector4 const& V1, Vector4 const& V2);
+Vector4 operator-(Vector4 const& V1, Vector4 const& V2);
 
-std::ostream &operator<<(std::ostream &stream, const Vector4 &T);
-std::ostream &operator<<(std::ostream &stream, const Matrix &M);
+std::ostream& operator<<(std::ostream& stream, const Vector4& T);
+std::ostream& operator<<(std::ostream& stream, const Matrix& M);
 
 #endif
