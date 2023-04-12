@@ -23,14 +23,6 @@ add_executable("${PROJECT_NAME}fourier" ${SRC}/fourierwraylib.cpp ${SRC}/engsupp
 
 add_executable("${PROJECT_NAME}curves" ${CURVESSRC})
 
-###############################################################################
-#### TESTS
-###############################################################################
-find_package(Catch2 3 REQUIRED)
-# These tests can use the Catch2-provided main
-add_executable("${PROJECT_NAME}tests" tests/coordinate.cpp)
-target_link_libraries("${PROJECT_NAME}tests" PRIVATE Catch2::Catch2WithMain)
-
 #set(raylib_VERBOSE 1)
 target_link_libraries("${PROJECT_NAME}fourier" raylib)
 target_link_libraries("${PROJECT_NAME}curves" raylib)
@@ -72,6 +64,11 @@ if (APPLE)
     target_link_libraries("${PROJECT_CURVES_OSX}" raylib)
 
 endif()
+
+###############################################################################
+#### TESTS
+###############################################################################
+add_subdirectory(tests)
 
 #############################################################
 #### Set up installer config.
