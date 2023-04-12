@@ -18,6 +18,9 @@
  */
 namespace es // aka engineering support
 {
+//------------------------------------------------------------------------------
+void Assert(bool Condition, char const* pCaller, int Line = 0);
+
 void TestHomogenousMatrix();
 auto Test3dCalucations() -> void;
 auto Test3dScreenCalculations() -> void;
@@ -95,9 +98,6 @@ Vector4 Lerp(Vector4 const& A, Vector4 const& B, float t);
 
 //------------------------------------------------------------------------------
 Matrix Mul(Matrix const& M1, Matrix const& M2);
-
-//------------------------------------------------------------------------------
-void Assert(bool Condition, char const* pCaller, int Line = 0);
 
 //------------------------------------------------------------------------------
 auto DiagVector(Matrix const& MhE2P) -> Vector4;
