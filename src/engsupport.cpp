@@ -149,7 +149,7 @@ Vector4 Add(Vector4 const& V1, Vector4 const& V2) {
 /**
  * Dot product.
  */
-float Mul(Vector4 const& V1, Vector4 const& V2) { return V1.x * V2.x + V1.y * V2.y + V1.z * V2.z + V1.w * V2.w; }
+float Dot(Vector4 const& V1, Vector4 const& V2) { return V1.x * V2.x + V1.y * V2.y + V1.z * V2.z + V1.w * V2.w; }
 
 /**
  */
@@ -211,6 +211,16 @@ bool Eq(Matrix const& M1, Matrix const& M2) {
 }
 
 /**
+ */
+bool Eq(Vector4 const& V1, Vector4 const& V2) {
+  auto const Result = V1.x == V2.x && //!<
+                      V1.y == V2.y && //!<
+                      V1.z == V2.z && //!<
+                      V1.w == V2.w;   //!<
+  return Result;
+}
+
+/**
  * Computes the linear interpolation between A and B, if the parameter t is
  * inside [0, 1]
  */
@@ -225,25 +235,25 @@ Vector4 Lerp(Vector4 const& A, Vector4 const& B, float t) {
  */
 Matrix Mul(Matrix const& M1, Matrix const& M2) {
   Matrix Result{};
-  Result.m0 = Mul(Vector4{M1.m0, M1.m4, M1.m8, M1.m12}, Vector4{M2.m0, M2.m1, M2.m2, M2.m3});
-  Result.m1 = Mul(Vector4{M1.m1, M1.m5, M1.m9, M1.m13}, Vector4{M2.m0, M2.m1, M2.m2, M2.m3});
-  Result.m2 = Mul(Vector4{M1.m2, M1.m6, M1.m10, M1.m14}, Vector4{M2.m0, M2.m1, M2.m2, M2.m3});
-  Result.m3 = Mul(Vector4{M1.m3, M1.m7, M1.m11, M1.m15}, Vector4{M2.m0, M2.m1, M2.m2, M2.m3});
+  Result.m0 = Dot(Vector4{M1.m0, M1.m4, M1.m8, M1.m12}, Vector4{M2.m0, M2.m1, M2.m2, M2.m3});
+  Result.m1 = Dot(Vector4{M1.m1, M1.m5, M1.m9, M1.m13}, Vector4{M2.m0, M2.m1, M2.m2, M2.m3});
+  Result.m2 = Dot(Vector4{M1.m2, M1.m6, M1.m10, M1.m14}, Vector4{M2.m0, M2.m1, M2.m2, M2.m3});
+  Result.m3 = Dot(Vector4{M1.m3, M1.m7, M1.m11, M1.m15}, Vector4{M2.m0, M2.m1, M2.m2, M2.m3});
 
-  Result.m4 = Mul(Vector4{M1.m0, M1.m4, M1.m8, M1.m12}, Vector4{M2.m4, M2.m5, M2.m6, M2.m7});
-  Result.m5 = Mul(Vector4{M1.m1, M1.m5, M1.m9, M1.m13}, Vector4{M2.m4, M2.m5, M2.m6, M2.m7});
-  Result.m6 = Mul(Vector4{M1.m2, M1.m6, M1.m10, M1.m14}, Vector4{M2.m4, M2.m5, M2.m6, M2.m7});
-  Result.m7 = Mul(Vector4{M1.m3, M1.m7, M1.m11, M1.m15}, Vector4{M2.m4, M2.m5, M2.m6, M2.m7});
+  Result.m4 = Dot(Vector4{M1.m0, M1.m4, M1.m8, M1.m12}, Vector4{M2.m4, M2.m5, M2.m6, M2.m7});
+  Result.m5 = Dot(Vector4{M1.m1, M1.m5, M1.m9, M1.m13}, Vector4{M2.m4, M2.m5, M2.m6, M2.m7});
+  Result.m6 = Dot(Vector4{M1.m2, M1.m6, M1.m10, M1.m14}, Vector4{M2.m4, M2.m5, M2.m6, M2.m7});
+  Result.m7 = Dot(Vector4{M1.m3, M1.m7, M1.m11, M1.m15}, Vector4{M2.m4, M2.m5, M2.m6, M2.m7});
 
-  Result.m8  = Mul(Vector4{M1.m0, M1.m4, M1.m8, M1.m12}, Vector4{M2.m8, M2.m9, M2.m10, M2.m11});
-  Result.m9  = Mul(Vector4{M1.m1, M1.m5, M1.m9, M1.m13}, Vector4{M2.m8, M2.m9, M2.m10, M2.m11});
-  Result.m10 = Mul(Vector4{M1.m2, M1.m6, M1.m10, M1.m14}, Vector4{M2.m8, M2.m9, M2.m10, M2.m11});
-  Result.m11 = Mul(Vector4{M1.m3, M1.m7, M1.m11, M1.m15}, Vector4{M2.m8, M2.m9, M2.m10, M2.m11});
+  Result.m8  = Dot(Vector4{M1.m0, M1.m4, M1.m8, M1.m12}, Vector4{M2.m8, M2.m9, M2.m10, M2.m11});
+  Result.m9  = Dot(Vector4{M1.m1, M1.m5, M1.m9, M1.m13}, Vector4{M2.m8, M2.m9, M2.m10, M2.m11});
+  Result.m10 = Dot(Vector4{M1.m2, M1.m6, M1.m10, M1.m14}, Vector4{M2.m8, M2.m9, M2.m10, M2.m11});
+  Result.m11 = Dot(Vector4{M1.m3, M1.m7, M1.m11, M1.m15}, Vector4{M2.m8, M2.m9, M2.m10, M2.m11});
 
-  Result.m12 = Mul(Vector4{M1.m0, M1.m4, M1.m8, M1.m12}, Vector4{M2.m12, M2.m13, M2.m14, M2.m15});
-  Result.m13 = Mul(Vector4{M1.m1, M1.m5, M1.m9, M1.m13}, Vector4{M2.m12, M2.m13, M2.m14, M2.m15});
-  Result.m14 = Mul(Vector4{M1.m2, M1.m6, M1.m10, M1.m14}, Vector4{M2.m12, M2.m13, M2.m14, M2.m15});
-  Result.m15 = Mul(Vector4{M1.m3, M1.m7, M1.m11, M1.m15}, Vector4{M2.m12, M2.m13, M2.m14, M2.m15});
+  Result.m12 = Dot(Vector4{M1.m0, M1.m4, M1.m8, M1.m12}, Vector4{M2.m12, M2.m13, M2.m14, M2.m15});
+  Result.m13 = Dot(Vector4{M1.m1, M1.m5, M1.m9, M1.m13}, Vector4{M2.m12, M2.m13, M2.m14, M2.m15});
+  Result.m14 = Dot(Vector4{M1.m2, M1.m6, M1.m10, M1.m14}, Vector4{M2.m12, M2.m13, M2.m14, M2.m15});
+  Result.m15 = Dot(Vector4{M1.m3, M1.m7, M1.m11, M1.m15}, Vector4{M2.m12, M2.m13, M2.m14, M2.m15});
   return Result;
 }
 
@@ -529,98 +539,6 @@ auto Test3dScreenCalculations() -> void {
   }
 }
 
-/**
- */
-auto TestLerp() -> void {
-  Vector4 Start = es::Vector(1.f, 0.f, 0.f);
-  Vector4 End   = es::Vector(1.f, 1.f, 0.f);
-  for (int Idx = 0; Idx < 100; ++Idx) {
-    float const c = float(Idx) / 100.f;
-    std::cout << "Lerp at c=" << c << " = " << es::Lerp(Start, End, c) << std::endl;
-  }
-}
-
-/**
- * Test if a matrix is invertible.
- */
-auto TestInvert() -> void {
-
-  Matrix A{
-      1.f,
-      2.f,
-      3.f,
-      4.f, //!<
-      5.f,
-      6.f,
-      7.f,
-      8.f, //!<
-      9.f,
-      8.f,
-      7.f,
-      6.f, //!<
-      5.f,
-      4.f,
-      3.f,
-      2.f //!<
-  };
-  Matrix B{
-      -2.f,
-      1.f,
-      2.f,
-      3.f, //!<
-      3.f,
-      2.f,
-      1.f,
-      -1.f, //!<
-      4.f,
-      3.f,
-      6.f,
-      5.f, //!<
-      1.f,
-      2.f,
-      7.f,
-      8.f //!<
-  };
-  Matrix Expect{
-      20.f,
-      22.f,
-      50.f,
-      48.f, //!<
-      44.f,
-      54.f,
-      114.f,
-      108.f, //!<
-      40.f,
-      58.f,
-      110.f,
-      102.f, //!<
-      16.f,
-      26.f,
-      46.f,
-      42.f //!<
-  };
-
-  auto const M = A * B;
-  if (M != Expect) {
-    std::cerr << "Matrix multiplication failed. Line: " << __LINE__ << std::endl;
-    std::cerr << "Calculated Matrix:" << M << std::endl;
-    std::cerr << "Expected Matrix:" << Expect << std::endl;
-  }
-  auto AIsInvertible = es::IsMatrixInvertible(A);
-  auto BIsInvertible = es::IsMatrixInvertible(B);
-
-  std::cout << "Matrix A is " << (AIsInvertible ? "invertible" : "not invertible") << std::endl;
-  std::cout << "Matrix B is " << (BIsInvertible ? "invertible" : "not invertible") << std::endl;
-  if (BIsInvertible) {
-    auto InvB   = MatrixInvert(B);
-    auto TstInv = B * InvB;
-    std::cout << InvB << std::endl;
-    std::cout << TstInv << std::endl;
-    if (TstInv != I()) {
-      std::cerr << __FUNCTION__ << " -> FAIL: Invert of Matrix B: " << B << std::endl;
-    }
-  }
-}
 }; // namespace es
 
 Matrix  operator*(Matrix const& M1, Matrix const& M2) { return es::Mul(M1, M2); }
@@ -630,8 +548,9 @@ bool    operator!=(Matrix const& M1, Matrix const& M2) { return !(M1 == M2); }
 Vector4 operator*(Matrix const& M, Vector4 const& V) { return es::Mul(M, V); }
 Vector4 operator*(Vector4 const& V1, float c) { return es::Mul(V1, c); }
 Vector4 operator+(Vector4 const& V1, Vector4 const& V2) { return es::Add(V1, V2); }
-float   operator*(Vector4 const& V1, Vector4 const& V2) { return es::Mul(V1, V2); }
+float   operator*(Vector4 const& V1, Vector4 const& V2) { return es::Dot(V1, V2); }
 Vector4 operator-(Vector4 const& V1, Vector4 const& V2) { return es::Sub(V1, V2); }
+bool    operator==(Vector4 const& V1, Vector4 const& V2) { return es::Eq(V1, V2); }
 
 /**
  */
