@@ -21,8 +21,6 @@ namespace es // aka engineering support
 //------------------------------------------------------------------------------
 void Assert(bool Condition, char const* pCaller, int Line = 0);
 
-void TestHomogenousMatrix();
-
 /**
  * Identity matrix 4x4
  */

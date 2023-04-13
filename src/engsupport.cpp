@@ -276,48 +276,6 @@ auto DiagVectorAbs(Matrix const& MhE2P) -> Vector4 {
   return es::Vector(std::abs(D.x), std::abs(D.y), std::abs(D.z));
 }
 
-//------------------------------------------------------------------------------
-void TestHomogenousMatrix() {
-  // float m0, m4, m8, m12;  // Matrix first row (4 components)
-  // float m1, m5, m9, m13;  // Matrix second row (4 components)
-  // float m2, m6, m10, m14; // Matrix third row (4 components)
-  // float m3, m7, m11, m15; // Matrix fourth row (4 components)
-  auto            Hes  = es::I();
-  constexpr float Flip = -1.f;
-
-  // Make 1 engineering unit correspond to 100 pixels.
-  constexpr float Eng2Pixel = 100;
-
-  // Set translation:
-  Hes.m12 = 1280 / 2.f;
-  Hes.m13 = 1024 / 2.f;
-
-  // Some engineering test points.
-  auto const Pe1 = es::Point(0.f, 0.f, 0.f);
-  auto const Pe2 = es::Point(1.f, 0.f, 0.f);
-  auto const Pe3 = es::Point(-1.f, 0.f, 0.f);
-  auto const Ps  = Hes * Pe1;
-
-  std::cout << Hes << std::endl;
-  std::cout << Ps << std::endl;
-
-  // Flip and scale to pixel value.
-  Hes.m0  = Flip * Eng2Pixel;
-  Hes.m5  = Flip * Eng2Pixel;
-  Hes.m10 = Flip * Eng2Pixel;
-  std::cout << "Eng point " << Pe1 << " moves to screen coord " << Hes * Pe1 << std::endl;
-  std::cout << "Eng point " << Pe2 << " moves to screen coord " << Hes * Pe2 << std::endl;
-  std::cout << "Eng point " << Pe3 << " moves to screen coord " << Hes * Pe3 << std::endl;
-
-  // Screen translation
-  Matrix Hst{};
-  Hst.m12 = 100.f;
-  Hst.m13 = 100.f;
-  auto H  = Hes + Hst;
-  std::cout << "Eng point " << Pe1 << " moves to screen coord " << H * Pe1 << std::endl;
-  std::cout << "Eng point " << Pe2 << " moves to screen coord " << H * Pe2 << std::endl;
-  std::cout << "Eng point " << Pe3 << " moves to screen coord " << H * Pe3 << std::endl;
-}
 
 
 }; // namespace es

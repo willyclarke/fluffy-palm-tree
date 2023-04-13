@@ -944,14 +944,6 @@ auto main(int argc, char const* argv[]) -> int {
 
   SetTraceLogLevel(LOG_ALL);
 
-  // ---
-  // NOTE: Poor mans testing framework.
-  // ---
-  if (argc > 1) {
-    es::TestHomogenousMatrix();
-    return 0;
-  }
-
   currob::data Data{};
   Data.vTrendPoints.resize(size_t(Data.screenWidth * Data.screenHeight));
   auto pData = &Data;

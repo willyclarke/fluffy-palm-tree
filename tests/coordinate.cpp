@@ -228,6 +228,43 @@ TEST_CASE("Test3dCalculations", "[engsupport]") {
   }
 }
 
+TEST_CASE("TestHomogenousMatrix", "[engsupport]") {
+  // float m0, m4, m8, m12;  // Matrix first row (4 components)
+  // float m1, m5, m9, m13;  // Matrix second row (4 components)
+  // float m2, m6, m10, m14; // Matrix third row (4 components)
+  // float m3, m7, m11, m15; // Matrix fourth row (4 components)
+  auto            MhE2P = es::I();
+  constexpr float Flip  = -1.f;
+
+  // Make 1 engineering unit correspond to 100 pixels.
+  constexpr float Eng2Pixel = 100;
+
+  // Set translation:
+  MhE2P.m12 = 1280 / 2.f;
+  MhE2P.m13 = 1024 / 2.f;
+
+  // Some engineering test points.
+  auto const Pe1 = es::Point(0.f, 0.f, 0.f);
+  auto const Pe2 = es::Point(1.f, 0.f, 0.f);
+  auto const Pe3 = es::Point(-1.f, 0.f, 0.f);
+
+  // Flip and scale to pixel value.
+  MhE2P.m0  = Flip * Eng2Pixel;
+  MhE2P.m5  = Flip * Eng2Pixel;
+  MhE2P.m10 = Flip * Eng2Pixel;
+  REQUIRE(MhE2P * Pe1 == es::Point(640.f, 512.f, 0.f));
+  REQUIRE(MhE2P * Pe2 == es::Point(540.f, 512.f, 0.f));
+  REQUIRE(MhE2P * Pe3 == es::Point(740.f, 512.f, 0.f));
+
+  // Screen translation
+  Matrix Hst{};
+  Hst.m12 = 100.f;
+  Hst.m13 = 100.f;
+  auto H  = MhE2P + Hst;
+  REQUIRE(H * Pe1 == es::Point(740.f, 612.f, 0.f));
+  REQUIRE(H * Pe2 == es::Point(640.f, 612.f, 0.f));
+  REQUIRE(H * Pe3 == es::Point(840.f, 612.f, 0.f));
+}
 /**
 MIT License
 

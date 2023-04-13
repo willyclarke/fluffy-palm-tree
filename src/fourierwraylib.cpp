@@ -234,10 +234,6 @@ auto vGridInPixels(Matrix const &Hep, //!< Homogenous matrix from engineering to
 //----------------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
 
-  if (argc > 1) {
-    es::TestHomogenousMatrix();
-  }
-
   data Data{};
   Data.vTrendPoints.reserve(size_t(Data.screenWidth));
 
