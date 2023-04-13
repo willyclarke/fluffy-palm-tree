@@ -167,6 +167,68 @@ TEST_CASE("Test3dScreenCalculations", "[engsupport]") {
 }
 
 /**
+ */
+TEST_CASE("Test3dCalculations", "[engsupport]") {
+
+  Matrix MhE2S{};
+
+  // Move from engineering space to screen space
+  // i.e. The center of the screen will be at x=3,y=4
+  MhE2S = MatrixInvert(es::SetTranslation(es::Point(3.f, 4.f, 0.f)));
+  {
+    Vector4 const V = MhE2S * Vector4{0.f, 0.f, 0.f, 1.f};
+    REQUIRE(V == es::Point(-3.f, -4.f, 0.f));
+  }
+  {
+    Vector4 const V = MhE2S * es::Point(3.f, 0.f, 0.f);
+    REQUIRE(V == es::Point(0.f, -4.f, 0.f));
+  }
+
+  MhE2S = es::InitScaling({}, es::Point(2.f, 3.f, 4.f));
+
+  // NOTE: Scaling applies to vectors and points.
+  Vector4 const Po = MhE2S * Vector4{-4.f, 6.f, 8.f, 1.f};
+  REQUIRE(Po == es::Point(-8.f, 18.f, 32.f));
+
+  Vector4 const Vector = MhE2S * Vector4{-4.f, 6.f, 8.f, 0.f};
+  REQUIRE(Vector == es::Vector(-8.f, 18.f, 32.f));
+
+  // ---
+  // Test Point multiplication with matrix.
+  // ---
+  {
+    Matrix M2{1.f, 2.f, 3.f, 4.f, 2.f, 4.f, 4.f, 2.f, 8.f, 6.f, 4.f, 1.f, 0.f, 0.f, 0.f, 1.f};
+
+    Vector4 const P      = es::Point(1.f, 2.f, 3.f);
+    auto const    Result = es::Mul(M2, P);
+    REQUIRE(Result == es::Point(18.f, 24.f, 33.f));
+  }
+
+  // ---
+  // Test Point multiplication with matrix using operators.
+  // ---
+  {
+    Matrix M2{1.f, 2.f, 3.f, 4.f, 2.f, 4.f, 4.f, 2.f, 8.f, 6.f, 4.f, 1.f, 0.f, 0.f, 0.f, 1.f};
+
+    Vector4 const P      = es::Point(1.f, 2.f, 3.f);
+    auto const    Result = M2 * P;
+    REQUIRE(Result == es::Point(18.f, 24.f, 33.f));
+  }
+
+  // ---
+  // Test Matrix multiplication with Matrix
+  // ---
+  {
+    Matrix A{1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f, 8.f, 7.f, 6.f, 5.f, 4.f, 3.f, 2.f};
+    Matrix B{-2.f, 1.f, 2.f, 3.f, 3.f, 2.f, 1.f, -1.f, 4.f, 3.f, 6.f, 5.f, 1.f, 2.f, 7.f, 8.f};
+    Matrix Expect{20.f, 22.f, 50.f, 48.f, 44.f, 54.f, 114.f, 108.f, 40.f, 58.f, 110.f, 102.f, 16.f, 26.f, 46.f, 42.f};
+
+    auto const M = A * B;
+    REQUIRE(M == Expect);
+  }
+}
+
+/**
 MIT License
 
 Copyright (c) 2023 Willy Clarke
