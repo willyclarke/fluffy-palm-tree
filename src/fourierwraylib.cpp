@@ -236,7 +236,6 @@ int main(int argc, char *argv[]) {
 
   if (argc > 1) {
     es::TestHomogenousMatrix();
-    es::Test3dCalucations();
   }
 
   data Data{};

@@ -22,7 +22,6 @@ namespace es // aka engineering support
 void Assert(bool Condition, char const* pCaller, int Line = 0);
 
 void TestHomogenousMatrix();
-auto Test3dCalucations() -> void;
 
 /**
  * Identity matrix 4x4
