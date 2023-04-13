@@ -60,6 +60,113 @@ TEST_CASE("Lerp between two points", "[engsupport]") {
 }
 
 /**
+ * Test changes from coordinate system to screen coordinates.
+ */
+TEST_CASE("Test3dScreenCalculations2", "[engsupport]") {
+  // Given the engineering input
+  auto const Eo             = es::Point(1.f, 1.f, 0.f);       //!< Engineering value at Screen Origo
+  auto const Pe0            = es::Point(0.f, 0.f, 0.f);       //!< Point Engineering 0
+  auto const Pe1            = Eo;                             //!< Point Engineering 1
+  auto const So             = es::Point(0.f, 0.f, 0.f);       //!< Screen Origo
+  auto const PixPerUnit     = es::Point(100.f, 100.f, 0.f);   //!< Pixel Per Unit
+  auto const ScreenSize     = es::Point(1280.f, 1024.f, 0.f); //!< Screen size
+  auto const ScreenSizeHalf = ScreenSize * 0.5f;              //!< Screen half size
+
+  // ---
+  // NOTE: The concept is to have the screen centre as Screen Origo aka 0,0,0 in x,y,z.
+  //       And to have a mapping from Engineering value to Screen value
+  //       so that it is possible to have the screen center become engineering
+  //       value, say, 3,3,0.
+  //       These matrix transforms should do a coordinate system transform
+  //       from Engineering -> Screen -> Pixel.
+  // ---
+
+  auto const MhE2S = MatrixInvert(es::SetTranslation(Eo));
+
+  // ---
+  // NOTE: Test that the homogenous matrix get set up correctly.
+  // ---
+  {
+    auto const Ps = MhE2S * Pe0;
+    // std::cout << "Ps :" << Ps << std::endl;
+    REQUIRE(es::Vector(MhE2S.m12, MhE2S.m13, MhE2S.m14) == (es::Vector(Eo.x, Eo.y, Eo.z) * -1.f));
+    REQUIRE(Ps == es::Point(-1.f, -1.f, -0.f));
+  }
+
+  // ---
+  // NOTE: Test that the Point engineering 1 is translated to Screen origo.
+  // ---
+  {
+    auto const Ps = MhE2S * Pe1;
+    // std::cout << "Ps :" << Ps << std::endl;
+    REQUIRE(Ps == So);
+  }
+
+  // Compute the scaling into pixel space - aka Matrix Pixel Scale = MhS2P
+  // That gives the Pixel Point Pp.
+  // auto const MhS2P = es::InitScaling({}, es::Point(100.f, 100.f, 100.f));
+  auto MhS2P             = es::SetTranslation(ScreenSizeHalf);
+  auto constexpr Reflect = true;
+  MhS2P                  = es::InitScaling(MhS2P, PixPerUnit, Reflect);
+
+  // ---
+  // NOTE: Convert from Screen coordinate to Pixel coordinate.
+  // ---
+  auto const PixelPos = MhS2P * So;
+  REQUIRE(PixelPos == ScreenSizeHalf);
+
+  auto const PixelPosPe0 = MhS2P * MhE2S * Pe0;
+  auto const PixelPosPe1 = MhS2P * MhE2S * Pe1;
+
+  // ---
+  // NOTE: Compute the total homogenous matrix for coordinate system transforms
+  //       from engineering space to pixelspace.
+  // ---
+  auto       MhE2P        = MhS2P * MhE2S;
+  auto const PixelPosPe0_ = MhE2P * Pe0;
+  auto const PixelPosPe1_ = MhE2P * Pe1;
+  REQUIRE(PixelPosPe0 == PixelPosPe0_);
+  REQUIRE(PixelPosPe1 == PixelPosPe1_);
+}
+
+/**
+ * Test changes from coordinate system to screen coordinates.
+ * This test uses InitTranslationInv which should be removed. FIXME: (Willy Clarke)
+ */
+TEST_CASE("Test3dScreenCalculations", "[engsupport]") {
+  // Given the engineering input
+  auto const Pe = es::Point(0.f, 0.f, 0.f);
+
+  // ---
+  // NOTE: The concept is to have the screen centre as Screen Origo aka 0,0,0 in x,y,z.
+  //       And to have a mapping from Engineering value to Screen value
+  //       so that it is possible to have the screen center become engineering
+  //       value, say, 3,3,0.
+  //       These matrix transforms should do a coordinate system transform
+  //       from Engineering -> Screen -> Pixel.
+  // ---
+
+  auto const MhE2S = es::InitTranslationInv({}, es::Point(1.f, 1.f, 1.f));
+  auto const Ps    = MhE2S * Pe;
+  REQUIRE(es::Point(MhE2S.m12, MhE2S.m13, MhE2S.m14) == es::Point(-1.f, -1.f, -1.f));
+  REQUIRE(Ps == es::Point(-1.f, -1.f, -1.f));
+
+  // Compute the scaling into pixel space - aka Matrix Pixel Scale = MhS2P
+  // That gives the Pixel Point Pp.
+  auto const MhS2P = es::InitScaling({}, es::Point(100.f, 100.f, 100.f));
+  auto const Pps   = MhS2P * Ps;
+  REQUIRE(Pps == es::Point(-100.f, -100.f, -100.f));
+
+  // Compute the translation onto the screen based on 0,0 beeing top left of
+  // screen
+  // Matrix Translation - aka MhE2P
+  auto const MhE2P = es::InitTranslationInv({}, es::Point(-1280.f / 2.f, -1024.f / 2.f, 0.f));
+
+  auto const Pp = MhE2P * Pps;
+  REQUIRE(Pp == es::Point(1280.f / 2.f, 1024.f / 2.f, 0.f));
+}
+
+/**
 MIT License
 
 Copyright (c) 2023 Willy Clarke
