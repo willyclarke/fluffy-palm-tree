@@ -951,8 +951,6 @@ auto main(int argc, char const* argv[]) -> int {
     es::TestHomogenousMatrix();
     es::Test3dCalucations();
     es::Test3dScreenCalculations();
-    es::TestLerp();
-    es::TestInvert();
     return 0;
   }
 

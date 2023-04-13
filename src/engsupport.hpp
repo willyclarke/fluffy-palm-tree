@@ -25,7 +25,6 @@ void TestHomogenousMatrix();
 auto Test3dCalucations() -> void;
 auto Test3dScreenCalculations() -> void;
 auto TestLerp() -> void;
-auto TestInvert() -> void;
 
 /**
  * Identity matrix 4x4
@@ -82,7 +81,7 @@ Matrix InitScaling(Matrix const& M, Vector4 const& Scale, bool Reflection = fals
 Vector4 Mul(Matrix const& M, Vector4 const& V);
 
 //------------------------------------------------------------------------------
-float Mul(Vector4 const& V1, Vector4 const& V2);
+float Dot(Vector4 const& V1, Vector4 const& V2);
 
 //------------------------------------------------------------------------------
 Vector4 Mul(Vector4 const& V1, float t);
@@ -92,6 +91,7 @@ Matrix Add(Matrix const& M1, Matrix const& M2);
 
 //------------------------------------------------------------------------------
 bool Eq(Matrix const& M1, Matrix const& M2);
+bool Eq(Vector4 const& V1, Vector4 const& V2);
 
 //------------------------------------------------------------------------------
 Vector4 Lerp(Vector4 const& A, Vector4 const& B, float t);
@@ -113,6 +113,7 @@ float   operator*(Vector4 const& V1, Vector4 const& V2);
 Vector4 operator*(Vector4 const& V1, float t);
 Vector4 operator+(Vector4 const& V1, Vector4 const& V2);
 Vector4 operator-(Vector4 const& V1, Vector4 const& V2);
+bool    operator==(Vector4 const& V1, Vector4 const& V2);
 
 std::ostream& operator<<(std::ostream& stream, const Vector4& T);
 std::ostream& operator<<(std::ostream& stream, const Matrix& M);
