@@ -152,13 +152,17 @@ Vector4 Add(Vector4 const& V1, Vector4 const& V2) {
 float Dot(Vector4 const& V1, Vector4 const& V2) { return V1.x * V2.x + V1.y * V2.y + V1.z * V2.z + V1.w * V2.w; }
 
 /**
+ * Multiplication will keep w unchanged.
  */
 Vector4 Mul(Vector4 const& V1, float c) {
-  Vector4 const Result{V1.x * c, V1.y * c, V1.z * c, V1.w * c};
+  Vector4 const Result{V1.x * c, V1.y * c, V1.z * c, V1.w };
   return Result;
 }
 
 /**
+ * Subtracting two vectors gives a new vector
+ * Subtracting two points gives a vector
+ * Subtracting vectors with point and vice versa has no meaning.
  */
 Vector4 Sub(Vector4 const& V1, Vector4 const& V2) {
   return Vector4{V1.x - V2.x, V1.y - V2.y, V1.z - V2.z, V1.w - V2.w};
@@ -490,52 +494,6 @@ auto Test3dCalucations() -> void {
       std::cerr << "Calculated Matrix:" << M << std::endl;
       std::cerr << "Expected Matrix:" << Expect << std::endl;
     }
-  }
-}
-
-/**
- * Test changes from coordinate system to screen coordinates.
- */
-auto Test3dScreenCalculations() -> void {
-  // Given the engineering input
-  auto const Pe = es::Point(0.f, 0.f, 0.f);
-
-  // Compute the screen coordinates - aka Matrix Screen = Ms
-  auto const Ms = es::InitTranslationInv({}, es::Point(0.f, 0.f, 0.f));
-  auto const Ps = Ms * Pe;
-
-  std::cout << "Ms : " << Ms << std::endl;
-  std::cout << "Pe :" << Pe << std::endl;
-  std::cout << "Ps :" << Ps << std::endl;
-
-  // Compute the scaling into pixel space - aka Matrix Pixel Scale = Mps
-  // That gives the Pixel Point Pp.
-  auto const Mps = es::InitScaling({}, es::Point(100.f, 100.f, 100.f));
-  auto const Pps = Mps * Ps;
-
-  std::cout << "Mps: " << Mps << std::endl;
-  std::cout << "Pps:" << Pps << std::endl;
-
-  // Compute the translation onto the screen based on 0,0 beeing top left of
-  // screen
-  // Matrix Translation - aka Mpt
-  auto const Mpt = es::InitTranslationInv({}, es::Point(-1280.f / 2.f, -1024.f / 2.f, 0.f));
-  std::cout << "Mpt:" << Mpt << std::endl;
-
-  {
-    auto const Pp = Mpt * Pps;
-    std::cout << "Pp :" << Pp << std::endl;
-  }
-
-  // ---
-  // Combine all the matrixes into one by multiplication.
-  // ---
-  {
-    auto const M        = Mpt * Mps * Ms;
-    auto const PixelPos = Mpt * Pps;
-    std::cout << "Resulting Matrix:" << M << std::endl;
-    std::cout << "Pixel xositi :" << PixelPos << std::endl;
-    std::cout << "Pixel cositi :" << M * Pe << std::endl;
   }
 }
 

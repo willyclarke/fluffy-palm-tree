@@ -950,7 +950,6 @@ auto main(int argc, char const* argv[]) -> int {
   if (argc > 1) {
     es::TestHomogenousMatrix();
     es::Test3dCalucations();
-    es::Test3dScreenCalculations();
     return 0;
   }
 
