@@ -33,6 +33,64 @@
 #include <vector>
 
 namespace {
+//------------------------------------------------------------------------------
+
+struct data {
+
+  // Declare the function pointer
+  auto(*UpdateDrawFramePointer)(data*) -> void;
+  std::vector<std::string> vHelpTextPage{};
+  std::string              WikipediaLink{};
+
+  int screenWidth  = 1280;
+  int screenHeight = 768;
+
+  enum class pages { PageAsteroid, PageFourier, PageFractal, PageHelp };
+  pages PageNum{};
+
+  int   Key{};
+  int   KeyPrv{};
+  bool  TakeScreenshot{};
+  bool  StopUpdate{};
+  bool  ShowGrid{true};
+  float Xcalc{};
+  int   n{5}; //!< Fourier series number of terms.
+  float dt{};
+  float t{};
+
+  std::mutex           MutTrendPoints{};
+  std::vector<Vector4> vTrendPoints{};
+  size_t               CurrentTrendPoint{};
+  size_t               NumTrendPoints{};
+  currob::grid_cfg     GridCfg{};
+
+  fluffy::fractal::config FractalConfig{};
+
+  Matrix MhE2P{}; //!< Homogenous matrix for conversion from engineering space
+                  //!< to pixelspace.
+
+  Matrix MhE2PInv{}; //!< Homogenous matrix for conversion from pixel
+                     //!< space to engineering space.
+
+  Matrix MhG2E{}; //!< Homogenous matrix for conversion from grid
+                  //!< space to engineering space.
+
+  Matrix MhG2EInv{}; //!< Homogenous matrix for conversion from grid
+                     //!< space to engineering space.
+
+  Vector4 vEngOffset{}; //!< Position of figure in engineering space.
+  Vector4 vPixelsPerUnit{100.f, 100.f, 100.f, 0.f};
+
+  Vector4 MousePosEng{};
+  Vector4 MousePosGrid{};
+  struct mouse_input {
+    bool MouseButtonPressed{};
+    bool MouseButtonDown{};
+    bool MouseButtonReleased{};
+    bool MouseButtonUp{};
+  };
+  mouse_input MouseInput{};
+};
 /*
  * Create lines and ticks for a grid in engineering units.
  */
@@ -47,8 +105,8 @@ auto GridCfgInPixels(Matrix const&           MhE2P, //!< Homogenous matrix from
   auto const GridHeight        = GridCfg.GridDimensions.y;
   auto const GridScreenXCentre = GridCfg.GridScreenCentre.x;
   auto const GridScreenYCentre = GridCfg.GridScreenCentre.y;
-  auto const GridOrigoX        = GridCfg.GridOrigo.x;
-  auto const GridOrigoY        = GridCfg.GridOrigo.y;
+  auto const GridOrigoX        = GridCfg.GridCenterValue.x;
+  auto const GridOrigoY        = GridCfg.GridCenterValue.y;
   auto       TickDistance      = GridCfg.TickDistance;
 
   auto const GridXLowerLeft = GridScreenXCentre - GridLength / 2.f;
@@ -300,6 +358,7 @@ auto ldaDrawPoint = [](Matrix const&  MhE2P,
   }
 };
 
+#if 0
 // ---
 // NOTE: Lamda to draw a point. Actually it draws a small circle.
 // ---
@@ -313,6 +372,7 @@ auto ldaDrawPixel = [](Matrix const&  MhE2P,
   // DrawPixel(PixelPos.x, PixelPos.y, ColorAlpha(Col, Alpha));
   DrawPixel(PixelPos.x, PixelPos.y, Col);
 };
+#endif
 
 /**
  * Draw a circle with Radius - go figure.
@@ -344,7 +404,7 @@ auto ldaDrawLine = [](Matrix const& MhE2P, Vector4 const& From, Vector4 const& T
 /**
  * Function to show the grid.
  */
-auto ldaShowGrid = [](currob::data* pData) -> void {
+auto ldaShowGrid = [](data* pData) -> void {
   for (size_t Idx = 0; Idx < pData->GridCfg.vGridLines.size(); Idx += 2) {
     auto const& Elem0 = pData->GridCfg.vGridLines[Idx];
     auto const& Elem1 = pData->GridCfg.vGridLines[Idx + 1];
@@ -362,22 +422,22 @@ auto ldaShowGrid = [](currob::data* pData) -> void {
 /**
  * Forward declarations.
  */
-auto UpdateDrawFrameFourier(currob::data* pData) -> void;
-auto UpdateDrawFrameFractal(currob::data* pData) -> void;
-auto UpdateDrawFrameAsteroid(currob::data* pData) -> void;
-auto UpdateDrawFrameHelp(currob::data* pData) -> void;
+auto UpdateDrawFrameFourier(data* pData) -> void;
+auto UpdateDrawFrameFractal(data* pData) -> void;
+auto UpdateDrawFrameAsteroid(data* pData) -> void;
+auto UpdateDrawFrameHelp(data* pData) -> void;
 
 /**
  * Keyboard input handling common to all the drawing routines.
  */
-auto HandleInput(currob::data* pData) -> bool {
+auto HandleInput(data* pData) -> bool {
 
   auto const MousePos = GetMousePosition();
   pData->MousePosEng  = pData->MhE2PInv * es::Point(MousePos.x, MousePos.y, 0.f);
   pData->MousePosGrid = pData->MhG2E * pData->MousePosEng;
   ldaDrawText(
       pData->MhE2P,
-      (pData->GridCfg.GridOrigo +
+      (pData->GridCfg.GridCenterValue +
        es::Vector(pData->GridCfg.GridDimensions.x * 0.1f, pData->GridCfg.GridDimensions.y * 0.1f, 0.f)),
       std::string("MousePosGrid:" + std::to_string(pData->MousePosGrid.x) + " " + std::to_string(pData->MousePosGrid.y))
           .c_str());
@@ -399,9 +459,10 @@ auto HandleInput(currob::data* pData) -> bool {
 
   bool InputChanged{};
 
-  constexpr float MinPixelPerUnit = 50.f;
-  constexpr float MaxPixelPerUnit = 10000.f;
-  auto const      PixelPerUnitPrv = pData->vPixelsPerUnit;
+  constexpr float MinPixelPerUnit        = 50.f;
+  constexpr float MaxPixelPerUnit        = 10000.f;
+  constexpr float MaxPixelPerUnitFractal = 10000000.f;
+  auto const      PixelPerUnitPrv        = pData->vPixelsPerUnit;
 
   if (pData->Key) {
     if (KEY_G == pData->Key) {
@@ -410,7 +471,7 @@ auto HandleInput(currob::data* pData) -> bool {
     } else if (KEY_DOWN == pData->Key) {
 
       auto& vPPU = pData->vPixelsPerUnit;
-      if (currob::data::pages::PageFractal == pData->PageNum) {
+      if (data::pages::PageFractal == pData->PageNum) {
         vPPU.x = std::max(vPPU.x / 1.5f, MinPixelPerUnit);
         vPPU.y = std::max(vPPU.y / 1.5f, MinPixelPerUnit);
         vPPU.z = std::max(vPPU.z / 1.5f, MinPixelPerUnit);
@@ -424,10 +485,10 @@ auto HandleInput(currob::data* pData) -> bool {
     } else if (KEY_UP == pData->Key) {
 
       auto& vPPU = pData->vPixelsPerUnit;
-      if (currob::data::pages::PageFractal == pData->PageNum) {
-        vPPU.x = std::min(MaxPixelPerUnit, vPPU.x * 1.5f);
-        vPPU.y = std::min(MaxPixelPerUnit, vPPU.y * 1.5f);
-        vPPU.z = std::min(MaxPixelPerUnit, vPPU.z * 1.5f);
+      if (data::pages::PageFractal == pData->PageNum) {
+        vPPU.x = std::min(MaxPixelPerUnitFractal, vPPU.x * 1.5f);
+        vPPU.y = std::min(MaxPixelPerUnitFractal, vPPU.y * 1.5f);
+        vPPU.z = std::min(MaxPixelPerUnitFractal, vPPU.z * 1.5f);
       } else {
         vPPU.x = std::min(MaxPixelPerUnit, vPPU.x + 10.f);
         vPPU.y = std::min(MaxPixelPerUnit, vPPU.y + 10.f);
@@ -442,7 +503,7 @@ auto HandleInput(currob::data* pData) -> bool {
       ++pData->n;
       InputChanged = true;
     } else if (KEY_SPACE == pData->Key) {
-      if (currob::data::pages::PageFractal == pData->PageNum) {
+      if (data::pages::PageFractal == pData->PageNum) {
         auto& vPPU = pData->vPixelsPerUnit;
         vPPU.x     = std::max(100.f, MinPixelPerUnit);
         vPPU.y     = std::max(100.f, MinPixelPerUnit);
@@ -473,7 +534,7 @@ auto HandleInput(currob::data* pData) -> bool {
       InputChanged                  = true;
     } else if (KEY_F2 == pData->Key) {
       pData->TakeScreenshot = true;
-    } else if (currob::data::pages::PageFractal == pData->PageNum) {
+    } else if (data::pages::PageFractal == pData->PageNum) {
       if (KEY_F7 == pData->Key) {
         pData->FractalConfig.Constant.x -= 0.01f;
         InputChanged = true;
@@ -505,17 +566,23 @@ auto HandleInput(currob::data* pData) -> bool {
 
     pData->GridCfg = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
 
-    if (currob::data::pages::PageFractal == pData->PageNum) {
-      auto const GridLowerLeft = pData->GridCfg.GridOrigo - pData->GridCfg.GridDimensions * 0.5f;
-      pData->FractalConfig     = fluffy::fractal::CreateFractalVector(
-          GridLowerLeft, pData->GridCfg.GridDimensions, pData->FractalConfig.Constant, es::DiagVectorAbs(pData->MhE2P));
+    if (data::pages::PageFractal == pData->PageNum) {
+      fluffy::fractal::CreateFractalPixelSpace(pData->GridCfg,
+                                               pData->screenWidth,
+                                               pData->screenHeight,
+                                               {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
+                                               pData->FractalConfig.Constant,
+                                               pData->FractalConfig.vFractalPixels);
     }
   }
 
+  // ---
+  // NOTE: Change grid centre value on mouse click.
+  // ---
   if (false && pData->MouseInput.MouseButtonReleased) {
-    pData->GridCfg.GridOrigo.x = pData->MousePosEng.x;
-    pData->GridCfg.GridOrigo.y = pData->MousePosEng.y;
-    pData->GridCfg             = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
+    pData->GridCfg.GridCenterValue.x = pData->MousePosEng.x;
+    pData->GridCfg.GridCenterValue.y = pData->MousePosEng.y;
+    pData->GridCfg                   = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
   }
 
   return InputChanged;
@@ -524,12 +591,12 @@ auto HandleInput(currob::data* pData) -> bool {
 /**
  * Draw an animation of n - terms of a Fourier square wave.
  */
-auto UpdateDrawFrameFourier(currob::data* pData) -> void {
+auto UpdateDrawFrameFourier(data* pData) -> void {
 
-  if (currob::data::pages::PageFourier != pData->PageNum) {
+  if (data::pages::PageFourier != pData->PageNum) {
     pData->vPixelsPerUnit = es::Vector(100.f, 100.f, 100.f);
     pData->WikipediaLink  = "https://en.wikipedia.org/wiki/Square_wave";
-    pData->PageNum        = currob::data::pages::PageFourier;
+    pData->PageNum        = data::pages::PageFourier;
   }
 
   BeginDrawing();
@@ -644,11 +711,11 @@ auto UpdateDrawFrameFourier(currob::data* pData) -> void {
 /**
  * Draw a Fractal.
  */
-auto UpdateDrawFrameFractal(currob::data* pData) -> void {
+auto UpdateDrawFrameFractal(data* pData) -> void {
 
-  if (currob::data::pages::PageFractal != pData->PageNum) {
+  if (data::pages::PageFractal != pData->PageNum) {
     pData->WikipediaLink = "https://en.wikipedia.org/wiki/Fractal";
-    pData->PageNum       = currob::data::pages::PageFractal;
+    pData->PageNum       = data::pages::PageFractal;
   }
 
   BeginDrawing();
@@ -657,23 +724,18 @@ auto UpdateDrawFrameFractal(currob::data* pData) -> void {
   // ---
   // NOTE: Render the fractal.
   {
-    auto constexpr NoPrint = false;
+    // fluffy::fractal::Render(es::Vector(800.f, 600.f, 0.f), pData->FractalConfig.Constant);
 
     // ---
     // NOTE: Iterate over the vector of vector of pixels.
     // ---
-    for (auto const& Evv : pData->FractalConfig.vvFractalPixels) {
-      for (auto const& Ev : Evv) {
-        auto Col = Ev.Col;
-        ldaDrawPixel(pData->MhE2P,
-                     pData->MhG2EInv * Ev.Pos,
-                     {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
-                     NoPrint,
-                     Col,
-                     Ev.Col.a);
-      }
+    for (auto E : pData->FractalConfig.vFractalPixels) {
+      DrawPixel(int(E.Pos.x), int(E.Pos.y), E.Col);
     }
 
+    // ---
+    // NOTE: Draw the text describing the fractal constant.
+    // ---
     ldaDrawText(pData->MhE2P,
                 es::Point(pData->GridCfg.GridScreenCentre.x - pData->GridCfg.GridDimensions.x / 2.f,
                           -(pData->GridCfg.GridDimensions.y / 2.f * 0.85f),
@@ -683,6 +745,9 @@ auto UpdateDrawFrameFractal(currob::data* pData) -> void {
   }
 
   {
+    // ---
+    // NOTE: Draw the text for the WikipediaLink.
+    // ---
     ldaDrawText(pData->MhE2P,
                 es::Point(pData->GridCfg.GridScreenCentre.x - pData->GridCfg.GridDimensions.x / 2.f,
                           -(pData->GridCfg.GridDimensions.y / 2.f * 1.05f),
@@ -724,16 +789,17 @@ auto UpdateDrawFrameFractal(currob::data* pData) -> void {
       ldaDrawBox(pData->MhE2P, GridP, GridD, ORANGE);
 
       if (pData->MouseInput.MouseButtonReleased) {
-        pData->GridCfg.GridOrigo = pData->MousePosEng;
-        pData->MhG2E             = es::SetTranslation(pData->GridCfg.GridOrigo);
-        pData->MhG2EInv          = MatrixInvert(pData->MhG2E);
-        pData->GridCfg           = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
-        auto const GridLowerLeft = pData->GridCfg.GridOrigo - pData->GridCfg.GridDimensions * 0.5f;
+        pData->GridCfg.GridCenterValue = pData->MousePosEng;
+        pData->MhG2E                   = es::SetTranslation(pData->GridCfg.GridCenterValue);
+        pData->MhG2EInv                = MatrixInvert(pData->MhG2E);
+        pData->GridCfg                 = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
 
-        pData->FractalConfig = fluffy::fractal::CreateFractalVector(GridLowerLeft,
-                                                                    pData->GridCfg.GridDimensions,
-                                                                    pData->FractalConfig.Constant,
-                                                                    es::DiagVectorAbs(pData->MhE2P));
+        fluffy::fractal::CreateFractalPixelSpace(pData->GridCfg,
+                                                 pData->screenWidth,
+                                                 pData->screenHeight,
+                                                 {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
+                                                 pData->FractalConfig.Constant,
+                                                 pData->FractalConfig.vFractalPixels);
       }
     }
   }
@@ -760,11 +826,11 @@ auto UpdateDrawFrameFractal(currob::data* pData) -> void {
  * Draw an animation of the Asteroid parametric equation.
  * link: https://en.wikipedia.org/wiki/Astroid
  */
-auto UpdateDrawFrameAsteroid(currob::data* pData) -> void {
+auto UpdateDrawFrameAsteroid(data* pData) -> void {
 
-  if (currob::data::pages::PageAsteroid != pData->PageNum) {
+  if (data::pages::PageAsteroid != pData->PageNum) {
     pData->WikipediaLink = "https://en.wikipedia.org/wiki/Astroid";
-    pData->PageNum       = currob::data::pages::PageAsteroid;
+    pData->PageNum       = data::pages::PageAsteroid;
   }
 
   BeginDrawing();
@@ -904,11 +970,11 @@ auto UpdateDrawFrameAsteroid(currob::data* pData) -> void {
 /**
  * Display a page with some help text.
  */
-auto UpdateDrawFrameHelp(currob::data* pData) -> void {
+auto UpdateDrawFrameHelp(data* pData) -> void {
 
-  if (currob::data::pages::PageHelp != pData->PageNum) {
+  if (data::pages::PageHelp != pData->PageNum) {
     pData->WikipediaLink = "";
-    pData->PageNum       = currob::data::pages::PageHelp;
+    pData->PageNum       = data::pages::PageHelp;
   }
 
   BeginDrawing();
@@ -944,7 +1010,7 @@ auto main(int argc, char const* argv[]) -> int {
 
   SetTraceLogLevel(LOG_ALL);
 
-  currob::data Data{};
+  data Data{};
   Data.vTrendPoints.resize(size_t(Data.screenWidth * Data.screenHeight));
   auto pData = &Data;
 
@@ -1015,9 +1081,12 @@ auto main(int argc, char const* argv[]) -> int {
   // ---
   // NOTE: Create a simple fractal before startup.
   // ---
-  auto const GridLowerLeft = pData->GridCfg.GridOrigo - pData->GridCfg.GridDimensions * 0.5f;
-  Data.FractalConfig       = fluffy::fractal::CreateFractalVector(
-      GridLowerLeft, Data.GridCfg.GridDimensions, es::Vector(-0.4f, 0.6f, 0.f), es::DiagVectorAbs(Data.MhE2P));
+  fluffy::fractal::CreateFractalPixelSpace(pData->GridCfg,
+                                           pData->screenWidth,
+                                           pData->screenHeight,
+                                           {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
+                                           pData->FractalConfig.Constant,
+                                           pData->FractalConfig.vFractalPixels);
 
   Data.UpdateDrawFramePointer = UpdateDrawFrameHelp;
 

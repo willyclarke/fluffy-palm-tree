@@ -7,7 +7,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include "../src/curvesrobotics.hpp"
 #include "../src/engsupport.hpp"
+
 #include "raylib.h"
 #include "raymath.h"
 
@@ -228,6 +230,214 @@ TEST_CASE("Test3dCalculations", "[engsupport]") {
   }
 }
 
+/**
+ */
+TEST_CASE("TestZoomAndScale", "[engsupport]") {
+
+  auto const ScreenPixelSize = es::Point(1280.f, 1080.f, 0.f);
+  auto constexpr BaseScale   = 100.f;
+  auto constexpr Zoom        = 200.f;
+
+  // Move from engineering space to screen space
+  Matrix MhE2S = es::SetTranslation(es::Point(0.f, 0.f, 0.f));
+  REQUIRE(MhE2S == es::I());
+  Matrix MhS2P = (es::SetTranslation(ScreenPixelSize * 0.5f)) * es::SetScaling(es::Vector(BaseScale, -BaseScale, 0.f));
+  std::cout << MhS2P << std::endl;
+
+  Matrix MhE2P = MhS2P * MhE2S;
+  std::cout << MhE2P << std::endl;
+
+  // ---
+  // STEP 1 : Zoom Level 100.
+  // ---
+  {
+    auto const V = MhE2P * es::Point(0.f, 0.f, 0.f);
+    REQUIRE(V == es::Point(ScreenPixelSize.x, ScreenPixelSize.y, 0.f) * 0.5f);
+  }
+
+  {
+    // NOTE: Since the y-axis is flipped a lower y-value means going up on the screen.
+    Vector4 const V = MhE2P * es::Point(3.f, 3.f, 0.f);
+    REQUIRE(V == es::Point(940.f, 240.f, 0.f));
+  }
+
+  // ---
+  // NOTE: Suppose that we zoom into the screen so that the scaling factor changes by
+  //       a factor of 2.
+  // ---
+  // ---
+  // STEP 2 : Zoom Level 200.
+  //          Step 2.A Reset Zoom back to 1.
+  //          Step 2.B Set zoom to Zoom-value...
+  // ---
+  MhE2P = MhE2P * es::SetScaling(es::Vector(1.f / BaseScale, -1.f / BaseScale, 0.f));
+  std::cout << "Resetting BaseScale:" << MhE2P << std::endl;
+
+  MhE2P = MhE2P * es::SetScaling(es::Vector(Zoom, -Zoom, 0.f));
+  std::cout << "Zoom of " << Zoom << " gives E2P matrix as : \n" << MhE2P << std::endl;
+
+  // NOTE: The pixel point should stay at the same place
+  // when zoom doubles and positing changes by a factor of 0.5.
+  {
+    Vector4 const V = MhE2P * es::Point(1.5f, 1.5f, 0.f);
+    REQUIRE(V == es::Point(940.f, 240.f, 0.f));
+  }
+
+  // ---
+  // Test Grid config
+  // ---
+  currob::grid_cfg GridCfg{};
+
+  // ---
+  // Now; lets say that the Grid is centered at the middle of the screen.
+  //      And that the dimension of the grid is unchanged,
+  //      but the engineering value at gridorigo is x,y,z=1,1,0.
+  // Task: Compute the Pixel x,y value at gridorigo and at the grid corners.
+  // ---
+
+  GridCfg.GridCenterValue = es::Point(1.f, 1.f, 0.f);
+  std::cout << "Change GridCenterValue to " << GridCfg.GridCenterValue << std::endl;
+
+  // The zoom - aka scaling has changed from the initial 100 to 200.
+  // This means that the Grid dimension has changed as well.
+  GridCfg.GridDimensions = GridCfg.GridDimensions * (BaseScale / Zoom);
+
+  // so to go from GridCenterValue to GridScreenCenter we need a coordinate system transform.
+  auto MhG2S = MatrixInvert(es::SetTranslation(GridCfg.GridCenterValue));
+
+  std::cout << "MhG2S :\n\n " << MhG2S << std::endl;
+
+  {
+    auto const EngValGridCentre = MhG2S * GridCfg.GridCenterValue;
+    std::cout << "EngValGridCentre:" << EngValGridCentre << std::endl;
+
+    auto const PixelPosGridCentre = MhE2P * MhG2S * GridCfg.GridCenterValue;
+    auto const PixelPosGridLL     = MhE2P * MhG2S * (GridCfg.GridCenterValue - GridCfg.GridDimensions * 0.5f);
+    auto const PixelPosGridUR     = MhE2P * MhG2S * (GridCfg.GridCenterValue + GridCfg.GridDimensions * 0.5f);
+    std::cout << "Zoom:" << Zoom << " -> PixelPosGridCentre:\n" << PixelPosGridCentre << std::endl;
+    std::cout << "Zoom:" << Zoom << " -> PixelPosGridLowerLeft:\n" << PixelPosGridLL << std::endl;
+    std::cout << "Zoom:" << Zoom << " -> PixelPosGridUpperRight:\n" << PixelPosGridUR << std::endl;
+  }
+
+  // and now we simulate that the grid centre value changes from x,y,z=1,1,0 to 2,2,0
+  // but the grid dimension remains the same.
+  GridCfg.GridCenterValue = es::Point(2.f, 2.f, 0.f);
+  MhG2S                   = MatrixInvert(es::SetTranslation(GridCfg.GridCenterValue));
+  std::cout << "\n----\nChange GridCenterValue to " << GridCfg.GridCenterValue << std::endl;
+  {
+    auto const EngValGridCentre = MhG2S * GridCfg.GridCenterValue;
+    std::cout << "EngValGridCentre:" << EngValGridCentre << std::endl;
+
+    auto const PixelPosGridCentre = MhE2P * MhG2S * GridCfg.GridCenterValue;
+    auto const PixelPosGridLL     = MhE2P * MhG2S * (GridCfg.GridCenterValue - GridCfg.GridDimensions * 0.5f);
+    auto const PixelPosGridUR     = MhE2P * MhG2S * (GridCfg.GridCenterValue + GridCfg.GridDimensions * 0.5f);
+    std::cout << "Zoom:" << Zoom << " -> PixelPosGridCentre:\n" << PixelPosGridCentre << std::endl;
+    std::cout << "Zoom:" << Zoom << " -> PixelPosGridLowerLeft:\n" << PixelPosGridLL << std::endl;
+    std::cout << "Zoom:" << Zoom << " -> PixelPosGridUpperRight:\n" << PixelPosGridUR << std::endl;
+
+    auto IsMhE2PInvertible = es::IsMatrixInvertible(MhE2P);
+    auto IsMhG2SInvertible = es::IsMatrixInvertible(MhG2S);
+    auto Mh                = MhE2P * MhG2S;
+    auto IsMhInvertible    = es::IsMatrixInvertible(Mh);
+    std::cout << "IsMhE2PInvertible: " << IsMhE2PInvertible << std::endl;
+    std::cout << "IsMhG2SInvertible: " << IsMhG2SInvertible << std::endl;
+    std::cout << "IsMhInvertible: " << IsMhInvertible << std::endl;
+
+    int  NumPixels{};
+    auto PosUpperLeft  = es::Vector(GridCfg.GridCenterValue.x - GridCfg.GridDimensions.x * 0.5f,
+                                   GridCfg.GridCenterValue.y + GridCfg.GridDimensions.y * 0.5,
+                                   0.f);
+    auto PosUpperRight = es::Vector(GridCfg.GridCenterValue.x + GridCfg.GridDimensions.x * 0.5f,
+                                    GridCfg.GridCenterValue.y + GridCfg.GridDimensions.y * 0.5,
+                                    0.f);
+    // auto PosLowerLeft  = es::Vector(GridCfg.GridCenterValue.x - GridCfg.GridDimensions.x * 0.5f,
+    //                                GridCfg.GridCenterValue.y - GridCfg.GridDimensions.y * 0.5,
+    //                                0.f);
+    auto PosLowerRight = es::Vector(GridCfg.GridCenterValue.x + GridCfg.GridDimensions.x * 0.5f,
+                                    GridCfg.GridCenterValue.y - GridCfg.GridDimensions.y * 0.5,
+                                    0.f);
+    auto PosXY         = PosUpperLeft;
+
+    for (int Y = PixelPosGridUR.y; Y < PixelPosGridLL.y; ++Y) {
+      for (int X = PixelPosGridLL.x; X < PixelPosGridUR.x; ++X) {
+        ++NumPixels;
+
+        //
+        // Do the calculation and use PosXY.
+        //
+
+        // Increment position.
+        PosXY.x        = std::min(PosXY.x + 1.f / Zoom, PosUpperRight.x);
+        auto GoodToGoX = PosXY.x <= GridCfg.GridCenterValue.x + GridCfg.GridDimensions.x * 0.5f;
+        if (!GoodToGoX)
+          std::cout << "NumPixels:" << NumPixels << ". Trip at PosXY:" << PosXY << std::endl;
+
+        es::Assert(GoodToGoX, __FUNCTION__);
+      }
+      PosXY.x = PosUpperLeft.x;
+      PosXY.y = std::max(PosXY.y - 1.f / Zoom, PosLowerRight.y);
+
+      auto GoodToGoY = PosXY.y >= GridCfg.GridCenterValue.y - GridCfg.GridDimensions.x * 0.5f;
+      if (!GoodToGoY)
+        std::cout << "NumPixels:" << NumPixels << ". Trip at PosXY:" << PosXY << std::endl;
+
+      es::Assert(GoodToGoY, __FUNCTION__);
+    }
+    std::cout << "NumPixels:" << NumPixels << std::endl;
+  }
+
+  // ---
+  // NOTE: So now it is possible to compute the pixels from and to which the
+  //       plot inside the grid should cover.
+  // ---
+  {}
+
+  // ----- xxxx
+
+  MhE2S = es::InitScaling({}, es::Point(2.f, 3.f, 4.f));
+
+  // NOTE: Scaling applies to vectors and points.
+  Vector4 const Po = MhE2S * es::Point(-4.f, 6.f, 8.f);
+  REQUIRE(Po == es::Point(-8.f, 18.f, 32.f));
+
+  Vector4 const Vector = MhE2S * es::Vector(-4.f, 6.f, 8.f);
+  REQUIRE(Vector == es::Vector(-8.f, 18.f, 32.f));
+
+  // ---
+  // Test Point multiplication with matrix.
+  // ---
+  {
+    Matrix M2{1.f, 2.f, 3.f, 4.f, 2.f, 4.f, 4.f, 2.f, 8.f, 6.f, 4.f, 1.f, 0.f, 0.f, 0.f, 1.f};
+
+    Vector4 const P      = es::Point(1.f, 2.f, 3.f);
+    auto const    Result = es::Mul(M2, P);
+    REQUIRE(Result == es::Point(18.f, 24.f, 33.f));
+  }
+
+  // ---
+  // Test Point multiplication with matrix using operators.
+  // ---
+  {
+    Matrix M2{1.f, 2.f, 3.f, 4.f, 2.f, 4.f, 4.f, 2.f, 8.f, 6.f, 4.f, 1.f, 0.f, 0.f, 0.f, 1.f};
+
+    Vector4 const P      = es::Point(1.f, 2.f, 3.f);
+    auto const    Result = M2 * P;
+    REQUIRE(Result == es::Point(18.f, 24.f, 33.f));
+  }
+
+  // ---
+  // Test Matrix multiplication with Matrix
+  // ---
+  {
+    Matrix A{1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f, 8.f, 7.f, 6.f, 5.f, 4.f, 3.f, 2.f};
+    Matrix B{-2.f, 1.f, 2.f, 3.f, 3.f, 2.f, 1.f, -1.f, 4.f, 3.f, 6.f, 5.f, 1.f, 2.f, 7.f, 8.f};
+    Matrix Expect{20.f, 22.f, 50.f, 48.f, 44.f, 54.f, 114.f, 108.f, 40.f, 58.f, 110.f, 102.f, 16.f, 26.f, 46.f, 42.f};
+
+    auto const M = A * B;
+    REQUIRE(M == Expect);
+  }
+}
+
 TEST_CASE("TestHomogenousMatrix", "[engsupport]") {
   // float m0, m4, m8, m12;  // Matrix first row (4 components)
   // float m1, m5, m9, m13;  // Matrix second row (4 components)
@@ -265,6 +475,71 @@ TEST_CASE("TestHomogenousMatrix", "[engsupport]") {
   REQUIRE(H * Pe2 == es::Point(640.f, 612.f, 0.f));
   REQUIRE(H * Pe3 == es::Point(840.f, 612.f, 0.f));
 }
+
+/**
+ * Test Lerp
+ */
+TEST_CASE("Lerp", "[engsupport]") {
+  auto ldaGradient = [](int Iterations, int MaxIterations) -> Color {
+    Color      Result{};
+    auto const t        = float(Iterations) / float(MaxIterations);
+    auto const Black    = es::Vector(0.f, 0.f, 0.f);
+    auto const White    = es::Vector(1.f, 1.f, 1.f);
+    auto const Gradient = es::Lerp(Black, White, t) * 255.f;
+    Result.r            = 0xFF & (unsigned char)(Gradient.x);
+    Result.g            = 0xFF & (unsigned char)(Gradient.y);
+    Result.b            = 0xFF & (unsigned char)(Gradient.z);
+    // Result.a            = 0xFF & (unsigned char)(255.f - float(255.f * float(Iterations) / float(MaxIterations)));
+    Result.a = 0xFF & (unsigned char)(float(255.f * t));
+    return Result;
+  };
+  auto Gradient0 = ldaGradient(50, 50);
+  auto Gradient1 = ldaGradient(25, 50);
+  auto Gradient2 = ldaGradient(0, 50);
+  REQUIRE(Gradient0.r == 255);
+  REQUIRE(Gradient0.g == 255);
+  REQUIRE(Gradient0.b == 255);
+  REQUIRE(Gradient0.a == 255);
+
+  REQUIRE(Gradient1.r == 127);
+  REQUIRE(Gradient1.g == 127);
+  REQUIRE(Gradient1.b == 127);
+  REQUIRE(Gradient1.a == 127);
+
+  REQUIRE(Gradient2.r == 0);
+  REQUIRE(Gradient2.g == 0);
+  REQUIRE(Gradient2.b == 0);
+  REQUIRE(Gradient2.a == 0);
+}
+
+/**
+ * Test Lerp
+ */
+// TEST_CASE("LerpColorGradient", "[engsupport]") {
+//   // Define a struct to represent an RGB color
+//   struct Color {
+//     int r, g, b;
+//   };
+//
+//   // Define the lerp function
+//   auto LerpColor = [](double t) -> Color {
+//     long ColorCode = double(0xFFFFFF) * t;
+//     // Compute the color values
+//     int r = 0xFF & ColorCode;
+//     int g = 0xFF & (ColorCode >> 8);
+//     int b = 0xFF & (ColorCode >> 16);
+//
+//     // Return the RGB color value
+//     return {r, g, b};
+//   };
+//
+//   // Test the lerp function
+//   for (double t = 0; t <= 1; t += 0.001) {
+//     Color c = LerpColor(t);
+//     std::cout << "t = " << t << ", color = (" << c.r << ", " << c.g << ", " << c.b << ")" << std::endl;
+//   }
+// }
+
 /**
 MIT License
 

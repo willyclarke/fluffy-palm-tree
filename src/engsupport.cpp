@@ -86,11 +86,21 @@ Matrix InitTranslationInv(Matrix const& M, Vector4 const& vTranslation) {
 
 /**
  */
-auto SetTranslation(Vector4 const& Origo) -> Matrix {
+auto SetTranslation(Vector4 const& Translation) -> Matrix {
   auto Result = es::I();
-  Result.m12  = Origo.x;
-  Result.m13  = Origo.y;
-  Result.m14  = Origo.z;
+  Result.m12  = Translation.x;
+  Result.m13  = Translation.y;
+  Result.m14  = Translation.z;
+  return Result;
+}
+
+/**
+ */
+auto SetScaling(Vector4 const& Scale) -> Matrix {
+  auto Result = es::I();
+  Result.m0   = Scale.x;
+  Result.m5   = Scale.y;
+  Result.m10  = Scale.z;
   return Result;
 }
 
@@ -111,6 +121,8 @@ Vector4 Point(float X, float Y, float Z) { return Vector4{X, Y, Z, 1.f}; }
  *             And there is no meaning in adding Points since w would not be 1.
  */
 Vector4 Vector(float X, float Y, float Z) { return Vector4{X, Y, Z, 0.f}; }
+
+vector4_double Vector4Double(double X, double Y, double Z) { return vector4_double{X, Y, Z, 0.f}; }
 
 /**
  * Return matrix 4x4 for conversion from engineering space to screen space.
@@ -146,6 +158,10 @@ Vector4 Add(Vector4 const& V1, Vector4 const& V2) {
   return Vector4{V1.x + V2.x, V1.y + V2.y, V1.z + V2.z, std::min(1.f, V1.w + V2.w)};
 }
 
+vector4_double Add(vector4_double const& V1, vector4_double const& V2) {
+  return vector4_double{V1.x + V2.x, V1.y + V2.y, V1.z + V2.z, std::min(1., V1.w + V2.w)};
+}
+
 /**
  * Dot product.
  */
@@ -155,7 +171,7 @@ float Dot(Vector4 const& V1, Vector4 const& V2) { return V1.x * V2.x + V1.y * V2
  * Multiplication will keep w unchanged.
  */
 Vector4 Mul(Vector4 const& V1, float c) {
-  Vector4 const Result{V1.x * c, V1.y * c, V1.z * c, V1.w };
+  Vector4 const Result{V1.x * c, V1.y * c, V1.z * c, V1.w};
   return Result;
 }
 
@@ -261,6 +277,8 @@ Matrix Mul(Matrix const& M1, Matrix const& M2) {
   return Result;
 }
 
+vector4_double VectorDouble(double X, double Y, double Z) { return vector4_double{X, Y, Z, 0.}; }
+vector4_double VectorDouble(Vector4 const& V) { return vector4_double{V.x, V.y, V.z, V.w}; }
 /**
  * Return vector containing the absolute value of the elements on the diagonal
  * of a Matrix. Can be used for pulling out resolution.
@@ -276,24 +294,38 @@ auto DiagVectorAbs(Matrix const& MhE2P) -> Vector4 {
   return es::Vector(std::abs(D.x), std::abs(D.y), std::abs(D.z));
 }
 
-
-
 }; // namespace es
 
-Matrix  operator*(Matrix const& M1, Matrix const& M2) { return es::Mul(M1, M2); }
-Matrix  operator+(Matrix const& M1, Matrix const& M2) { return es::Add(M1, M2); }
-bool    operator==(Matrix const& M1, Matrix const& M2) { return es::Eq(M1, M2); }
-bool    operator!=(Matrix const& M1, Matrix const& M2) { return !(M1 == M2); }
-Vector4 operator*(Matrix const& M, Vector4 const& V) { return es::Mul(M, V); }
-Vector4 operator*(Vector4 const& V1, float c) { return es::Mul(V1, c); }
-Vector4 operator+(Vector4 const& V1, Vector4 const& V2) { return es::Add(V1, V2); }
-float   operator*(Vector4 const& V1, Vector4 const& V2) { return es::Dot(V1, V2); }
-Vector4 operator-(Vector4 const& V1, Vector4 const& V2) { return es::Sub(V1, V2); }
-bool    operator==(Vector4 const& V1, Vector4 const& V2) { return es::Eq(V1, V2); }
+Matrix             operator*(Matrix const& M1, Matrix const& M2) { return es::Mul(M1, M2); }
+Matrix             operator+(Matrix const& M1, Matrix const& M2) { return es::Add(M1, M2); }
+bool               operator==(Matrix const& M1, Matrix const& M2) { return es::Eq(M1, M2); }
+bool               operator!=(Matrix const& M1, Matrix const& M2) { return !(M1 == M2); }
+Vector4            operator*(Matrix const& M, Vector4 const& V) { return es::Mul(M, V); }
+Vector4            operator*(Vector4 const& V1, float c) { return es::Mul(V1, c); }
+Vector4            operator+(Vector4 const& V1, Vector4 const& V2) { return es::Add(V1, V2); }
+es::vector4_double operator+(es::vector4_double const& V1, es::vector4_double const& V2) { return es::Add(V1, V2); }
+float              operator*(Vector4 const& V1, Vector4 const& V2) { return es::Dot(V1, V2); }
+Vector4            operator-(Vector4 const& V1, Vector4 const& V2) { return es::Sub(V1, V2); }
+bool               operator==(Vector4 const& V1, Vector4 const& V2) { return es::Eq(V1, V2); }
 
 /**
  */
 std::ostream& operator<<(std::ostream& stream, const Vector4& T) {
+  // ---
+  // NOTE: The width need to be big enough to hold a negative sign.
+  // ---
+  size_t const P{5};
+  size_t const W{P + 5};
+  stream << ((T.w != 0) ? "Point :" : "Vector:");
+  stream << " " << std::fixed << std::setprecision(P) << std::setw(W) << T.x << " " << std::fixed
+         << std::setprecision(P) << std::setw(W) << T.y << " " << std::fixed << std::setprecision(P) << std::setw(W)
+         << T.z << " " << std::fixed << std::setprecision(P) << std::setw(W) << T.w;
+  return stream;
+}
+
+/**
+ */
+std::ostream& operator<<(std::ostream& stream, const es::vector4_double& T) {
   // ---
   // NOTE: The width need to be big enough to hold a negative sign.
   // ---

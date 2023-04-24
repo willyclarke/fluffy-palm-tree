@@ -1,6 +1,8 @@
 #ifndef SRC_FRACTAL_HPP
 #define SRC_FRACTAL_HPP
 
+#include "curvesrobotics.hpp"
+#include "engsupport.hpp"
 #include "raylib.h"
 
 #include <mutex>
@@ -10,22 +12,24 @@
 namespace fluffy {
 namespace fractal {
 struct pixel {
-  Vector4 Pos{0.f, 0.f, 0.f, 1.f}; //!< Make it a point.
-  Color   Col{BLACK};
+  es::vector4_double Pos{0.f, 0.f, 0.f, 1.f}; //!< Make it a point.
+  Color              Col{BLACK};
 };
 
 struct config {
-  Vector4                                          Constant{-0.4f, 0.6f, 0.f, 0.f};
-  Vector4                                          Dimension{2.f, 2.f, 0.f, 0.f};
+  es::vector4_double                               Constant{-0.4f, 0.6f, 0.f, 0.f};
+  es::vector4_double                               Dimension{2.f, 2.f, 0.f, 0.f};
   std::vector<fluffy::fractal::pixel>              vFractalPixels{};
-  std::vector<std::vector<fluffy::fractal::pixel>> vvFractalPixels{};
 };
 
-auto CreateFractalVector(Vector4 const& StartPos,
-                         Vector4 const& RenderSize,
-                         Vector4 const& Constant,
-                         Vector4 const& Resolution) -> fluffy::fractal::config;
-
+auto GetFractalColor(double t) -> Color;
+auto Render(es::vector4_double const& RenderSize, es::vector4_double const& Constant) -> void;
+auto CreateFractalPixelSpace(currob::grid_cfg const&              GridCfgInput,
+                             int                                  screenWidth,
+                             int                                  screenHeigth,
+                             es::vector4_double const&            Resolution,
+                             es::vector4_double const&            Constant,
+                             std::vector<fluffy::fractal::pixel>& vFractalPixels) -> void;
 }; // namespace fractal
 }; // namespace fluffy
 #endif

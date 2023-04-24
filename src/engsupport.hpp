@@ -42,7 +42,12 @@ Matrix InitTranslationInv(Matrix const& M, Vector4 const& vTranslation);
 /**
  * Use a Homogenous matrix to store a translation.
  */
-auto SetTranslation(Vector4 const& Origo) -> Matrix;
+auto SetTranslation(Vector4 const& Translation) -> Matrix;
+
+/**
+ * Set scaling for x,y,z. Use negative numbers to flip the direction.
+ */
+auto SetScaling(Vector4 const& Scale) -> Matrix;
 
 /**
  * Defintions: A point in 3D space has w set to 1.
@@ -61,6 +66,17 @@ Vector4 Point(float X, float Y, float Z);
  *             And there is no meaning in adding Points since w would not be 1.
  */
 Vector4 Vector(float X, float Y, float Z);
+
+// Vector4Double, 4 components
+struct vector4_double {
+  double x{}; // Vector x component
+  double y{}; // Vector y component
+  double z{}; // Vector z component
+  double w{}; // Vector w component
+};
+
+vector4_double VectorDouble(double X, double Y, double Z);
+vector4_double VectorDouble(Vector4 const& V);
 
 //------------------------------------------------------------------------------
 /**
@@ -99,18 +115,20 @@ auto DiagVector(Matrix const& MhE2P) -> Vector4;
 auto DiagVectorAbs(Matrix const& MhE2P) -> Vector4;
 }; // namespace es
 
-Matrix  operator*(Matrix const& M1, Matrix const& M2);
-Matrix  operator+(Matrix const& M1, Matrix const& M2);
-bool    operator==(Matrix const& M1, Matrix const& M2);
-bool    operator!=(Matrix const& M1, Matrix const& M2);
-Vector4 operator*(Matrix const& M, Vector4 const& V);
-float   operator*(Vector4 const& V1, Vector4 const& V2);
-Vector4 operator*(Vector4 const& V1, float t);
-Vector4 operator+(Vector4 const& V1, Vector4 const& V2);
-Vector4 operator-(Vector4 const& V1, Vector4 const& V2);
-bool    operator==(Vector4 const& V1, Vector4 const& V2);
+Matrix             operator*(Matrix const& M1, Matrix const& M2);
+Matrix             operator+(Matrix const& M1, Matrix const& M2);
+bool               operator==(Matrix const& M1, Matrix const& M2);
+bool               operator!=(Matrix const& M1, Matrix const& M2);
+Vector4            operator*(Matrix const& M, Vector4 const& V);
+float              operator*(Vector4 const& V1, Vector4 const& V2);
+Vector4            operator*(Vector4 const& V1, float t);
+Vector4            operator+(Vector4 const& V1, Vector4 const& V2);
+Vector4            operator-(Vector4 const& V1, Vector4 const& V2);
+bool               operator==(Vector4 const& V1, Vector4 const& V2);
+es::vector4_double operator+(es::vector4_double const& V1, es::vector4_double const& V2);
 
 std::ostream& operator<<(std::ostream& stream, const Vector4& T);
+std::ostream& operator<<(std::ostream& stream, const es::vector4_double& T);
 std::ostream& operator<<(std::ostream& stream, const Matrix& M);
 
 #endif

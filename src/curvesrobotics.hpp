@@ -9,7 +9,6 @@
  * MIT License - see bottom of file.
  */
 
-#include "fractal.hpp"
 #include "raylib.h"
 
 #include <mutex>
@@ -46,71 +45,14 @@ struct grid_cfg {
 
   /**
    */
-  Vector4 GridOrigo{0.f, 0.f, 0.f, 1.f}; //!< Make it a Point.
+  Vector4 GridCenterValue{0.f, 0.f, 0.f, 1.f}; //!< Make it a Point.
 
   /**
-   * x is GridLength
-   * y is GridHeight
+   * @- x is GridLength
+   * @- y is GridHeight
+   * @- Defined as Homogenous vector, w=0.
    */
   Vector4 GridDimensions{8.f, 6.f, 0.f, 0.f};
-};
-
-//------------------------------------------------------------------------------
-struct data {
-
-  // Declare the function pointer
-  auto(*UpdateDrawFramePointer)(data*) -> void;
-  std::vector<std::string> vHelpTextPage{};
-  std::string              WikipediaLink{};
-
-  int screenWidth  = 1280;
-  int screenHeight = 768;
-
-  enum class pages { PageAsteroid, PageFourier, PageFractal, PageHelp };
-  pages PageNum{};
-
-  int   Key{};
-  int   KeyPrv{};
-  bool  TakeScreenshot{};
-  bool  StopUpdate{};
-  bool  ShowGrid{true};
-  float Xcalc{};
-  int   n{5}; //!< Fourier series number of terms.
-  float dt{};
-  float t{};
-
-  std::mutex           MutTrendPoints{};
-  std::vector<Vector4> vTrendPoints{};
-  size_t               CurrentTrendPoint{};
-  size_t               NumTrendPoints{};
-  grid_cfg             GridCfg{};
-
-  fluffy::fractal::config FractalConfig{};
-
-  Matrix MhE2P{}; //!< Homogenous matrix for conversion from engineering space
-                  //!< to pixelspace.
-
-  Matrix MhE2PInv{}; //!< Homogenous matrix for conversion from pixel
-                     //!< space to engineering space.
-
-  Matrix MhG2E{}; //!< Homogenous matrix for conversion from grid
-                  //!< space to engineering space.
-
-  Matrix MhG2EInv{}; //!< Homogenous matrix for conversion from grid
-                     //!< space to engineering space.
-
-  Vector4 vEngOffset{}; //!< Position of figure in engineering space.
-  Vector4 vPixelsPerUnit{100.f, 100.f, 100.f, 0.f};
-
-  Vector4 MousePosEng{};
-  Vector4 MousePosGrid{};
-  struct mouse_input {
-    bool MouseButtonPressed{};
-    bool MouseButtonDown{};
-    bool MouseButtonReleased{};
-    bool MouseButtonUp{};
-  };
-  mouse_input MouseInput{};
 };
 
 }; // namespace currob
