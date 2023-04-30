@@ -1108,6 +1108,9 @@ auto main(int argc, char const* argv[]) -> int {
                                              {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
                                              pData->FractalConfig.Constant,
                                              pData->FractalConfig.iMage);
+    if (pData->FractalConfig.iMage.data) {
+      pData->FractalTexture = LoadTextureFromImage(pData->FractalConfig.iMage);
+    }
   }
 
   Data.UpdateDrawFramePointer = UpdateDrawFrameHelp;
