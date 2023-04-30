@@ -5,6 +5,7 @@
 #include "raymath.h"
 
 #include <cmath>
+#include <memory>
 #include <sys/_types/_size_t.h>
 
 namespace {
@@ -174,13 +175,15 @@ auto CreateFractalPixelSpace(currob::grid_cfg const&   GridCfg,
   if (outputImage.data == nullptr) {
 
     // Allocate memory for the pixel data
-    Color* pixels = (Color*)malloc(ExpectedNumPixels * sizeof(Color));
-    if (pixels) {
-      outputImage.data    = pixels;
-      outputImage.width   = PixelCanvas.Dimension.x;
-      outputImage.height  = PixelCanvas.Dimension.y;
-      outputImage.format  = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-      outputImage.mipmaps = 1;
+    std::shared_ptr<Color> spColorArray(new Color[ExpectedNumPixels], std::default_delete<Color[]>());
+
+    if (spColorArray) {
+      PixelCanvas.spColorArray = spColorArray;
+      outputImage.data         = spColorArray.get();
+      outputImage.width        = PixelCanvas.Dimension.x;
+      outputImage.height       = PixelCanvas.Dimension.y;
+      outputImage.format       = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+      outputImage.mipmaps      = 1;
       if (PrintMe) {
         std::cout << "outputImage.poutputImage.data:" << outputImage.data << std::endl;
         std::cout << "outputImage.width            :" << outputImage.width << std::endl;
