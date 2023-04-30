@@ -16,20 +16,39 @@ struct pixel {
   Color              Col{BLACK};
 };
 
-struct config {
-  es::vector4_double                               Constant{-0.4f, 0.6f, 0.f, 0.f};
-  es::vector4_double                               Dimension{2.f, 2.f, 0.f, 0.f};
-  std::vector<fluffy::fractal::pixel>              vFractalPixels{};
+struct pixel_canvas {
+  Vector4 Dimension{};
+  Vector4 PosUL{};
+  Vector4 PosUR{};
+  Vector4 PosLL{};
+  Vector4 PosLR{};
+  int     ResolutionX{100}; //!< Pixel per unit X direction.
+  int     ResolutionY{100}; //!< Pixel per unit Y direction.
+  int     NThreads{1};      //!< Number of threads to use for rendering.
+  int     YIncrement{};     //!< When we have x threads, each thread will deal with a sub block of height YIncrement.
+  Matrix  MhS2P{};          //!< Homogenous matrix to go from Screen to pixel, screen center is at 0,0,0.
 };
 
+struct config {
+  es::vector4_double                  Constant{-0.4f, 0.6f, 0.f, 0.f};
+  es::vector4_double                  Dimension{2.f, 2.f, 0.f, 0.f};
+  std::vector<fluffy::fractal::pixel> vFractalPixels{};
+  Image                               iMage{};
+  pixel_canvas                        PixelCanvas{};
+};
+
+auto ConfigurePixelCanvas(int CenterX, int CenterY, int Width, int Height, int ResolutionX, int ResolutionY)
+    -> pixel_canvas;
 auto GetFractalColor(double t) -> Color;
 auto Render(es::vector4_double const& RenderSize, es::vector4_double const& Constant) -> void;
 auto CreateFractalPixelSpace(currob::grid_cfg const&              GridCfgInput,
+                             pixel_canvas const&                  PixelCanvas,
                              int                                  screenWidth,
                              int                                  screenHeigth,
                              es::vector4_double const&            Resolution,
                              es::vector4_double const&            Constant,
-                             std::vector<fluffy::fractal::pixel>& vFractalPixels) -> void;
+                             std::vector<fluffy::fractal::pixel>& vFractalPixels,
+                             Image&                               outputImage) -> void;
 }; // namespace fractal
 }; // namespace fluffy
 #endif

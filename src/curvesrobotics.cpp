@@ -65,6 +65,7 @@ struct data {
   currob::grid_cfg     GridCfg{};
 
   fluffy::fractal::config FractalConfig{};
+  Texture2D               FractalTexture{};
 
   Matrix MhE2P{}; //!< Homogenous matrix for conversion from engineering space
                   //!< to pixelspace.
@@ -459,9 +460,9 @@ auto HandleInput(data* pData) -> bool {
 
   bool InputChanged{};
 
-  constexpr float MinPixelPerUnit        = 50.f;
+  constexpr float MinPixelPerUnit        = 1.f;
   constexpr float MaxPixelPerUnit        = 10000.f;
-  constexpr float MaxPixelPerUnitFractal = 10000000.f;
+  constexpr float MaxPixelPerUnitFractal = 1000000000.f;
   auto const      PixelPerUnitPrv        = pData->vPixelsPerUnit;
 
   if (pData->Key) {
@@ -486,9 +487,9 @@ auto HandleInput(data* pData) -> bool {
 
       auto& vPPU = pData->vPixelsPerUnit;
       if (data::pages::PageFractal == pData->PageNum) {
-        vPPU.x = std::min(MaxPixelPerUnitFractal, vPPU.x * 1.5f);
-        vPPU.y = std::min(MaxPixelPerUnitFractal, vPPU.y * 1.5f);
-        vPPU.z = std::min(MaxPixelPerUnitFractal, vPPU.z * 1.5f);
+        vPPU.x = std::min(MaxPixelPerUnitFractal, vPPU.x * 1.1f);
+        vPPU.y = std::min(MaxPixelPerUnitFractal, vPPU.y * 1.1f);
+        vPPU.z = std::min(MaxPixelPerUnitFractal, vPPU.z * 1.1f);
       } else {
         vPPU.x = std::min(MaxPixelPerUnit, vPPU.x + 10.f);
         vPPU.y = std::min(MaxPixelPerUnit, vPPU.y + 10.f);
@@ -568,11 +569,18 @@ auto HandleInput(data* pData) -> bool {
 
     if (data::pages::PageFractal == pData->PageNum) {
       fluffy::fractal::CreateFractalPixelSpace(pData->GridCfg,
+                                               pData->FractalConfig.PixelCanvas,
                                                pData->screenWidth,
                                                pData->screenHeight,
                                                {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
                                                pData->FractalConfig.Constant,
-                                               pData->FractalConfig.vFractalPixels);
+                                               pData->FractalConfig.vFractalPixels,
+                                               pData->FractalConfig.iMage);
+      if (pData->FractalConfig.iMage.data) {
+        pData->FractalTexture = LoadTextureFromImage(pData->FractalConfig.iMage);
+        std::cout << "FractalTexture id:" << pData->FractalTexture.id << std::endl;
+        std::cout << "FractalTexture mipmaps:" << pData->FractalTexture.mipmaps << std::endl;
+      }
     }
   }
 
@@ -729,9 +737,9 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
     // ---
     // NOTE: Iterate over the vector of vector of pixels.
     // ---
-    for (auto E : pData->FractalConfig.vFractalPixels) {
-      DrawPixel(int(E.Pos.x), int(E.Pos.y), E.Col);
-    }
+    // for (auto E : pData->FractalConfig.vFractalPixels) {
+    //   DrawPixel(int(E.Pos.x), int(E.Pos.y), E.Col);
+    // }
 
     // ---
     // NOTE: Draw the text describing the fractal constant.
@@ -795,11 +803,13 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
         pData->GridCfg                 = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
 
         fluffy::fractal::CreateFractalPixelSpace(pData->GridCfg,
+                                                 pData->FractalConfig.PixelCanvas,
                                                  pData->screenWidth,
                                                  pData->screenHeight,
                                                  {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
                                                  pData->FractalConfig.Constant,
-                                                 pData->FractalConfig.vFractalPixels);
+                                                 pData->FractalConfig.vFractalPixels,
+                                                 pData->FractalConfig.iMage);
       }
     }
   }
@@ -812,6 +822,10 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
   if (pData->ShowGrid) {
     ldaShowGrid(pData);
   }
+
+  auto const PixPosStrt =
+      pData->MhE2P * es::Point(-pData->GridCfg.GridDimensions.x / 2.f, pData->GridCfg.GridDimensions.y / 2.f, 0.f);
+  DrawTexture(pData->FractalTexture, PixPosStrt.x, PixPosStrt.y, WHITE);
 
   EndDrawing();
 
@@ -1081,12 +1095,31 @@ auto main(int argc, char const* argv[]) -> int {
   // ---
   // NOTE: Create a simple fractal before startup.
   // ---
-  fluffy::fractal::CreateFractalPixelSpace(pData->GridCfg,
-                                           pData->screenWidth,
-                                           pData->screenHeight,
-                                           {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
-                                           pData->FractalConfig.Constant,
-                                           pData->FractalConfig.vFractalPixels);
+  {
+    constexpr int ResolutionX = 100;
+    constexpr int ResolutionY = 100;
+
+    auto UL = Data.MhE2P * es::Point(-Data.GridCfg.GridDimensions.x / 2.f,
+                                     Data.GridCfg.GridDimensions.y / 2.f,
+                                     0.f); // Data.GridCfg.GridDimensions * 0.5f;
+    auto LR = Data.MhE2P * es::Point(Data.GridCfg.GridDimensions.x / 2.f,
+                                     -Data.GridCfg.GridDimensions.y / 2.f,
+                                     0.f); // Data.GridCfg.GridDimensions * 0.5f;
+    std::cout << " ---- XXXX UL " << UL << std::endl;
+    std::cout << " ---- XXXX LR " << LR << std::endl;
+
+    pData->FractalConfig.PixelCanvas = fluffy::fractal::ConfigurePixelCanvas(
+        pData->screenWidth >> 1, pData->screenHeight >> 1, LR.x - UL.x, LR.y - UL.y, ResolutionX, ResolutionY);
+
+    fluffy::fractal::CreateFractalPixelSpace(pData->GridCfg,
+                                             pData->FractalConfig.PixelCanvas,
+                                             pData->screenWidth,
+                                             pData->screenHeight,
+                                             {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
+                                             pData->FractalConfig.Constant,
+                                             pData->FractalConfig.vFractalPixels,
+                                             pData->FractalConfig.iMage);
+  }
 
   Data.UpdateDrawFramePointer = UpdateDrawFrameHelp;
 
@@ -1107,6 +1140,9 @@ auto main(int argc, char const* argv[]) -> int {
   // ---
   // De-Initialization
   // ---
+  if (Data.FractalConfig.iMage.data)
+    free(Data.FractalConfig.iMage.data);
+
   CloseWindow(); // Close window and OpenGL context
 
   return 0;

@@ -5,6 +5,7 @@ find_package(Catch2 3 REQUIRED)
 add_executable("${PROJECT_NAME}tests"
   coordinate.cpp
   ../src/engsupport.cpp
+  ../src/fractal.cpp
   )
 target_link_libraries("${PROJECT_NAME}tests" PRIVATE
   Catch2::Catch2WithMain
