@@ -9,6 +9,7 @@
 
 #include "../src/curvesrobotics.hpp"
 #include "../src/engsupport.hpp"
+#include "../src/fractal.hpp"
 
 #include "raylib.h"
 #include "raymath.h"
@@ -510,6 +511,29 @@ TEST_CASE("Lerp", "[engsupport]") {
   REQUIRE(Gradient2.g == 0);
   REQUIRE(Gradient2.b == 0);
   REQUIRE(Gradient2.a == 0);
+}
+
+TEST_CASE("Pixel_Canvas", "[fractal]") {
+
+  constexpr int ResolutionX = 100;
+  constexpr int ResolutionY = 100;
+  constexpr int CenterX     = 250;
+  constexpr int CenterY     = 250;
+  constexpr int DimensionX  = 500;
+  constexpr int DimensionY  = 500;
+
+  fluffy::fractal::pixel_canvas PC =
+      fluffy::fractal::ConfigurePixelCanvas(CenterX, CenterY, DimensionX, DimensionY, ResolutionX, ResolutionY);
+
+  auto IsMhInvertible = es::IsMatrixInvertible(PC.MhS2P);
+  auto CenterPixel    = PC.MhS2P * es::Point(0.f, 0.f, 0.f);
+  REQUIRE(IsMhInvertible == false);
+  REQUIRE(PC.MhS2P.m0 == ResolutionX);
+  REQUIRE(PC.MhS2P.m5 == -ResolutionY); // NOTE: Y in pixel increases downwards.
+  REQUIRE(CenterPixel == es::Point(CenterX, CenterY, 0.f));
+  REQUIRE(PC.Dimension.x == (PC.PosUR.x - PC.PosUL.x));
+  REQUIRE(PC.Dimension.y == -(PC.PosUR.y - PC.PosLR.y));
+  REQUIRE(PC.Dimension.y == -(PC.PosUL.y - PC.PosLL.y));
 }
 
 /**

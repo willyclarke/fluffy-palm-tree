@@ -52,6 +52,50 @@ namespace fluffy {
 namespace fractal {
 
 /**
+ * @CenterX - Pixel X pos for center of screen.
+ * @CenterY - Pixel Y pos for center of screen.
+ * @Width -  In pixels.
+ * @Height - In pixels.
+ * @ResolutionX - Number of pixels in X direction per unit (m or s).
+ * @ResolutionY - Number of pixels in Y direction per unit (m or s).
+ */
+auto ConfigurePixelCanvas(int CenterX, int CenterY, int Width, int Height, int ResolutionX, int ResolutionY)
+    -> pixel_canvas {
+
+  pixel_canvas Result{};
+
+  int const UpperLeftX = CenterX - (Width >> 1);
+  int const UpperLeftY = CenterY - (Height >> 1);
+
+  Result.Dimension.x = Width;
+  Result.Dimension.y = Height;
+  Result.PosUL       = es::Point(UpperLeftX, UpperLeftY, 0.f);
+  Result.PosUR       = es::Point(UpperLeftX + Width, UpperLeftY, 0.f);
+  Result.PosLL       = es::Point(UpperLeftX, UpperLeftY + Height, 0.f);
+  Result.PosLR       = es::Point(UpperLeftX + Width, UpperLeftY + Height, 0.f);
+
+  Result.MhS2P = es::SetTranslation(es::Vector(UpperLeftX + Width / 2.f, UpperLeftY + Height / 2.f, 0.f));
+  Result.MhS2P = Result.MhS2P * es::SetScaling(es::Vector(ResolutionX, -ResolutionY, 0.f));
+
+  std::cout << __FUNCTION__ << "Center: " << CenterX << " " << CenterY << std::endl;
+  std::cout << __FUNCTION__ << "Dimension:" << Result.Dimension << std::endl;
+  std::cout << __FUNCTION__ << "UL: " << Result.PosUL << std::endl;
+  std::cout << __FUNCTION__ << "UR: " << Result.PosUR << std::endl;
+  std::cout << __FUNCTION__ << "LL: " << Result.PosLL << std::endl;
+  std::cout << __FUNCTION__ << "LR: " << Result.PosLR << std::endl;
+  std::cout << __FUNCTION__ << "MhS2P: " << Result.MhS2P << std::endl;
+
+  // ---
+  // NOTE: Set up Nthreads and give a block of the fractal to compute per.
+  // available thread.
+  // ---
+  Result.NThreads   = std::max<unsigned int>(std::thread::hardware_concurrency(), 1);
+  Result.YIncrement = float(Height) / float(Result.NThreads);
+
+  return Result;
+}
+
+/**
  *
  */
 auto GetFractalColor(double t) -> Color {
@@ -104,17 +148,19 @@ auto Render(es::vector4_double const& RenderSize, es::vector4_double const& Cons
  * Render in pixel space.
  */
 auto CreateFractalPixelSpace(currob::grid_cfg const&              GridCfgInput,
+                             pixel_canvas const&                  PixelCanvas,
                              int                                  screenWidth,
                              int                                  screenHeigth,
                              es::vector4_double const&            Resolution,
                              es::vector4_double const&            Constant,
-                             std::vector<fluffy::fractal::pixel>& vFractalPixels) -> void {
+                             std::vector<fluffy::fractal::pixel>& vFractalPixels,
+                             Image&                               outputImage) -> void {
 
   auto const ScreenPixelSize = es::Point(screenWidth, screenHeigth, 0.f);
   auto constexpr BaseScale   = 100.;
   auto const Zoom            = double(Resolution.x);
 
-  static bool PrintMe = false;
+  static bool PrintMe = true;
 
   // Move from engineering space to screen space
   Matrix MhE2S = es::SetTranslation(es::Point(0.f, 0.f, 0.f));
@@ -180,9 +226,26 @@ auto CreateFractalPixelSpace(currob::grid_cfg const&              GridCfgInput,
                                               GridCfg.GridCenterValue.y - GridCfg.GridDimensions.y * 0.5,
                                               0.f);
 
-  auto ExpectedNumPixels = (PixelPosGridLL.y - PixelPosGridUR.y) * (PixelPosGridUR.x - PixelPosGridLL.x);
-  if (vFractalPixels.size() != ExpectedNumPixels)
+  //(PixelPosGridLL.y - PixelPosGridUR.y) * (PixelPosGridUR.x - PixelPosGridLL.x);
+  auto ExpectedNumPixels = PixelCanvas.Dimension.x * PixelCanvas.Dimension.y;
+  if (vFractalPixels.size() != size_t(ExpectedNumPixels))
     vFractalPixels.resize(ExpectedNumPixels, {});
+
+  if (outputImage.data == nullptr) {
+
+    // Allocate memory for the pixel data
+    Color* pixels = (Color*)malloc(ExpectedNumPixels * sizeof(Color));
+    if (pixels) {
+      outputImage.data    = pixels;
+      outputImage.width   = PixelCanvas.Dimension.x;
+      outputImage.height  = PixelCanvas.Dimension.y;
+      outputImage.format  = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+      outputImage.mipmaps = 1;
+      std::cout << "outputImage.poutputImage.data:" << outputImage.data << std::endl;
+      std::cout << "outputImage.width            :" << outputImage.width << std::endl;
+      std::cout << "outputImage.height           :" << outputImage.height << std::endl;
+    }
+  }
 
   if (PrintMe)
     std::cout << "ExpectedNumPixels:" << ExpectedNumPixels << ". Size of vFractalPixels:" << vFractalPixels.size()
@@ -196,35 +259,8 @@ auto CreateFractalPixelSpace(currob::grid_cfg const&              GridCfgInput,
     std::cout << "PosLowerRight:" << PosLowerRight << std::endl;
   }
 
-  // ---
-  // NOTE: Set up Nthreads and give a block of the fractal to compute per.
-  // available thread.
-  // ---
-  auto const Nthreads = std::max<unsigned int>(std::thread::hardware_concurrency(), 1);
-
-  // auto const NumBlocksX = 1;
-  auto const NumBlocksY = Nthreads;
-  auto const BlockSizeInPixels =
-      es::VectorDouble(PixelPosGridUR.x - PixelPosGridLL.x, PixelPosGridLL.y - PixelPosGridUR.y, 0.f);
-  auto const YIncrementPixels = BlockSizeInPixels.y / NumBlocksY;
+  auto const NumBlocksY       = PixelCanvas.NThreads;
   auto const YIncrement       = double(GridCfgInput.GridDimensions.y / NumBlocksY);
-
-  // // ---
-  // // NOTE: Create a vector of the PosXY that can be used by each of the threads for computing part of the fractal.
-  // //       Since we start at the upper left Y will actually decrement, hence the minus sign.
-  // // ---
-  // std::vector<es::vector4_double> vPosUpperLeft{};
-  // for (unsigned int Idx = 0; //!<
-  //      Idx < NumBlocksY;     //!<
-  //      ++Idx                 //!<
-  // ) {
-  //   auto const PosUL = PosUpperLeft + es::VectorDouble(0., -double(YIncrement * Idx), 0.);
-  //   std::cout << "Idx: " << Idx << " -> PosXY(" << Idx << ")=" << PosUL << std::endl;
-  //   vPosUpperLeft.push_back(PosUL);
-  // }
-  //
-  // std::cout << "NumBlocksX: " << NumBlocksX << ". NumBlocksY: " << NumBlocksY << ". YIncrement: " << YIncrementPixels
-  //           << ". BlockSize: " << BlockSizeInPixels << std::endl;
 
   struct data_fractal_gen {
 
@@ -241,6 +277,7 @@ auto CreateFractalPixelSpace(currob::grid_cfg const&              GridCfgInput,
     int                     PixelIdx{};      //
     size_t                  Idx{};           //
     fluffy::fractal::pixel* pPixel{nullptr}; //
+    Color*                  pColorArray{};   //
   };
 
   // ---
@@ -268,7 +305,8 @@ auto CreateFractalPixelSpace(currob::grid_cfg const&              GridCfgInput,
         // C.b       = Y % 100;
         // C.a       = 255;
 
-        *(Data.pPixel + Idx) = Pixel;
+        // *(Data.pPixel + Idx)      = Pixel;
+        *(Data.pColorArray + Idx) = Pixel.Col;
         ++Idx;
 
         PosXY.x = std::min(PosXY.x + 1. / Data.Zoom, Data.PosUpperRight.x);
@@ -292,11 +330,11 @@ auto CreateFractalPixelSpace(currob::grid_cfg const&              GridCfgInput,
   ) {
     data_fractal_gen Data{};
 
-    Data.XStart        = PixelPosGridLL.x;
-    Data.XEnd          = PixelPosGridUR.x;
-    Data.YStart        = PixelPosGridUR.y + YIncrementPixels * Idx;
-    Data.YEnd          = Data.YStart + YIncrementPixels;
-    Data.Zoom          = Zoom;
+    Data.XStart = PixelCanvas.PosUL.x;                                // PixelPosGridLL.x;
+    Data.XEnd   = PixelCanvas.PosUL.x + PixelCanvas.Dimension.x;      // PixelPosGridUR.x;
+    Data.YStart = PixelCanvas.PosUL.y + PixelCanvas.YIncrement * Idx; // PixelPosGridUR.y + YIncrementPixels * Idx;
+    Data.YEnd   = Data.YStart + PixelCanvas.YIncrement;
+    Data.Zoom   = Zoom;
     Data.PosUpperLeft  = PosUpperLeft + es::VectorDouble(0., -double(YIncrement * Idx), 0.);
     Data.PosUpperRight = PosUpperRight + es::VectorDouble(0., -double(YIncrement * Idx), 0.);
     Data.PosLowerRight = es::VectorDouble(PosUpperRight.x, Data.PosUpperRight.y - YIncrement, 0.);
@@ -304,18 +342,24 @@ auto CreateFractalPixelSpace(currob::grid_cfg const&              GridCfgInput,
     Data.PixelIdx      = PixelIdx;
     Data.Idx           = Idx;
     Data.pPixel        = &vFractalPixels[PixelIdx];
+    if (outputImage.data)
+      Data.pColorArray = (Color*)(outputImage.data) + PixelIdx;
+    else
+      Data.pColorArray = nullptr;
 
-    // std::cout << "Idx: " << Idx << ". XStart: " << Data.XStart << ". XEnd: " << Data.XEnd << ". Zoom:" << Data.Zoom
-    //           << std::endl;
-    // std::cout << "Idx: " << Idx << ". YStart: " << Data.YStart << ". YEnd: " << Data.YEnd << std::endl;
-    // std::cout << "Idx: " << Idx << ". PixelIdx: " << PixelIdx << std::endl;
-    // std::cout << "Idx: " << Idx << " -> PosUpperLeft(" << Idx << ")=" << Data.PosUpperLeft << std::endl;
-    // std::cout << "Idx: " << Idx << " -> PosUpperRight(" << Idx << ")=" << Data.PosUpperRight << std::endl;
-    // std::cout << "Idx: " << Idx << " -> PosLowerRight(" << Idx << ")=" << Data.PosLowerRight << std::endl;
-    // std::cout << " ---- " << std::endl;
+#if 0
+    std::cout << __FUNCTION__ << "-> pData.pColorArray: " << Data.pColorArray << std::endl;
+    std::cout << "Idx: " << Idx << ". XStart: " << Data.XStart << ". XEnd: " << Data.XEnd << ". Zoom:" << Data.Zoom
+              << std::endl;
+    std::cout << "Idx: " << Idx << ". YStart: " << Data.YStart << ". YEnd: " << Data.YEnd << std::endl;
+    std::cout << "Idx: " << Idx << ". PixelIdx: " << PixelIdx << std::endl;
+    std::cout << "Idx: " << Idx << " -> PosUpperLeft(" << Idx << ")=" << Data.PosUpperLeft << std::endl;
+    std::cout << "Idx: " << Idx << " -> PosUpperRight(" << Idx << ")=" << Data.PosUpperRight << std::endl;
+    std::cout << "Idx: " << Idx << " -> PosLowerRight(" << Idx << ")=" << Data.PosLowerRight << std::endl;
+    std::cout << " ---- " << std::endl;
+#endif
 
-    PixelIdx += (YIncrementPixels * (PixelPosGridUR.x - PixelPosGridLL.x));
-
+    PixelIdx += (PixelCanvas.YIncrement * (PixelPosGridUR.x - PixelPosGridLL.x));
     vT.push_back(std::thread(ldaJuliaSet, Data));
   }
 
