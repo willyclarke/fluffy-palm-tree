@@ -33,7 +33,6 @@ struct pixel_canvas {
 struct config {
   es::vector4_double                  Constant{-0.4f, 0.6f, 0.f, 0.f};
   es::vector4_double                  Dimension{2.f, 2.f, 0.f, 0.f};
-  std::vector<fluffy::fractal::pixel> vFractalPixels{};
   Image                               iMage{};
   pixel_canvas                        PixelCanvas{};
 };
@@ -42,14 +41,11 @@ auto ConfigurePixelCanvas(int CenterX, int CenterY, int Width, int Height, int R
     -> pixel_canvas;
 auto GetFractalColor(double t) -> Color;
 auto Render(es::vector4_double const& RenderSize, es::vector4_double const& Constant) -> void;
-auto CreateFractalPixelSpace(currob::grid_cfg const&              GridCfgInput,
-                             pixel_canvas&                        PixelCanvas,
-                             int                                  screenWidth,
-                             int                                  screenHeigth,
-                             es::vector4_double const&            Resolution,
-                             es::vector4_double const&            Constant,
-                             std::vector<fluffy::fractal::pixel>& vFractalPixels,
-                             Image&                               outputImage) -> void;
+auto CreateFractalPixelSpace(currob::grid_cfg const&   GridCfgInput,
+                             pixel_canvas&             PixelCanvas,
+                             es::vector4_double const& Resolution,
+                             es::vector4_double const& Constant,
+                             Image&                    outputImage) -> void;
 }; // namespace fractal
 }; // namespace fluffy
 #endif

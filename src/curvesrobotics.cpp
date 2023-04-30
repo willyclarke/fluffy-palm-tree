@@ -570,16 +570,11 @@ auto HandleInput(data* pData) -> bool {
     if (data::pages::PageFractal == pData->PageNum) {
       fluffy::fractal::CreateFractalPixelSpace(pData->GridCfg,
                                                pData->FractalConfig.PixelCanvas,
-                                               pData->screenWidth,
-                                               pData->screenHeight,
                                                {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
                                                pData->FractalConfig.Constant,
-                                               pData->FractalConfig.vFractalPixels,
                                                pData->FractalConfig.iMage);
       if (pData->FractalConfig.iMage.data) {
         pData->FractalTexture = LoadTextureFromImage(pData->FractalConfig.iMage);
-        std::cout << "FractalTexture id:" << pData->FractalTexture.id << std::endl;
-        std::cout << "FractalTexture mipmaps:" << pData->FractalTexture.mipmaps << std::endl;
       }
     }
   }
@@ -804,11 +799,8 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
 
         fluffy::fractal::CreateFractalPixelSpace(pData->GridCfg,
                                                  pData->FractalConfig.PixelCanvas,
-                                                 pData->screenWidth,
-                                                 pData->screenHeight,
                                                  {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
                                                  pData->FractalConfig.Constant,
-                                                 pData->FractalConfig.vFractalPixels,
                                                  pData->FractalConfig.iMage);
       }
     }
@@ -1113,11 +1105,8 @@ auto main(int argc, char const* argv[]) -> int {
 
     fluffy::fractal::CreateFractalPixelSpace(pData->GridCfg,
                                              pData->FractalConfig.PixelCanvas,
-                                             pData->screenWidth,
-                                             pData->screenHeight,
                                              {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
                                              pData->FractalConfig.Constant,
-                                             pData->FractalConfig.vFractalPixels,
                                              pData->FractalConfig.iMage);
   }
 
