@@ -5,6 +5,7 @@
 #include "engsupport.hpp"
 #include "raylib.h"
 
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -17,24 +18,25 @@ struct pixel {
 };
 
 struct pixel_canvas {
-  Vector4 Dimension{};
-  Vector4 PosUL{};
-  Vector4 PosUR{};
-  Vector4 PosLL{};
-  Vector4 PosLR{};
-  int     ResolutionX{100}; //!< Pixel per unit X direction.
-  int     ResolutionY{100}; //!< Pixel per unit Y direction.
-  int     NThreads{1};      //!< Number of threads to use for rendering.
-  int     YIncrement{};     //!< When we have x threads, each thread will deal with a sub block of height YIncrement.
-  Matrix  MhS2P{};          //!< Homogenous matrix to go from Screen to pixel, screen center is at 0,0,0.
-  bool    PrintMe{true};
+  std::shared_ptr<Color> spColorArray{};
+  Vector4                Dimension{};
+  Vector4                PosUL{};
+  Vector4                PosUR{};
+  Vector4                PosLL{};
+  Vector4                PosLR{};
+  int                    ResolutionX{100}; //!< Pixel per unit X direction.
+  int                    ResolutionY{100}; //!< Pixel per unit Y direction.
+  int                    NThreads{1};      //!< Number of threads to use for rendering.
+  int    YIncrement{}; //!< When we have x threads, each thread will deal with a sub block of height YIncrement.
+  Matrix MhS2P{};      //!< Homogenous matrix to go from Screen to pixel, screen center is at 0,0,0.
+  bool   PrintMe{};
 };
 
 struct config {
-  es::vector4_double                  Constant{-0.4f, 0.6f, 0.f, 0.f};
-  es::vector4_double                  Dimension{2.f, 2.f, 0.f, 0.f};
-  Image                               iMage{};
-  pixel_canvas                        PixelCanvas{};
+  es::vector4_double Constant{-0.4f, 0.6f, 0.f, 0.f};
+  es::vector4_double Dimension{2.f, 2.f, 0.f, 0.f};
+  Image              iMage{};
+  pixel_canvas       PixelCanvas{};
 };
 
 auto ConfigurePixelCanvas(int CenterX, int CenterY, int Width, int Height, int ResolutionX, int ResolutionY)

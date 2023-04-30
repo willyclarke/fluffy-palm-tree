@@ -438,10 +438,10 @@ auto HandleInput(data* pData) -> bool {
   pData->MousePosGrid = pData->MhG2E * pData->MousePosEng;
   ldaDrawText(
       pData->MhE2P,
-      (pData->GridCfg.GridCenterValue +
-       es::Vector(pData->GridCfg.GridDimensions.x * 0.1f, pData->GridCfg.GridDimensions.y * 0.1f, 0.f)),
-      std::string("MousePosGrid:" + std::to_string(pData->MousePosGrid.x) + " " + std::to_string(pData->MousePosGrid.y))
-          .c_str());
+      pData->MousePosGrid,
+      std::string("   " + std::to_string(pData->MousePosGrid.x) + " " + std::to_string(pData->MousePosGrid.y)).c_str(),
+      20,
+      WHITE);
 
   pData->MouseInput.MouseButtonUp       = IsMouseButtonUp(0);
   pData->MouseInput.MouseButtonDown     = IsMouseButtonDown(0);
@@ -456,7 +456,7 @@ auto HandleInput(data* pData) -> bool {
            140,
            10,
            20,
-           BLUE);
+           WHITE);
 
   bool InputChanged{};
 
@@ -728,13 +728,9 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
   // NOTE: Render the fractal.
   {
     // fluffy::fractal::Render(es::Vector(800.f, 600.f, 0.f), pData->FractalConfig.Constant);
-
-    // ---
-    // NOTE: Iterate over the vector of vector of pixels.
-    // ---
-    // for (auto E : pData->FractalConfig.vFractalPixels) {
-    //   DrawPixel(int(E.Pos.x), int(E.Pos.y), E.Col);
-    // }
+    auto const PixPosStrt =
+        pData->MhE2P * es::Point(-pData->GridCfg.GridDimensions.x / 2.f, pData->GridCfg.GridDimensions.y / 2.f, 0.f);
+    DrawTexture(pData->FractalTexture, PixPosStrt.x, PixPosStrt.y, WHITE);
 
     // ---
     // NOTE: Draw the text describing the fractal constant.
@@ -744,7 +740,9 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
                           -(pData->GridCfg.GridDimensions.y / 2.f * 0.85f),
                           0.f),
                 std::string(std::to_string(pData->FractalConfig.Constant.x) + " " +
-                            std::to_string(pData->FractalConfig.Constant.y) + "j"));
+                            std::to_string(pData->FractalConfig.Constant.y) + "j"),
+                20,
+                WHITE);
   }
 
   {
@@ -802,6 +800,10 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
                                                  {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
                                                  pData->FractalConfig.Constant,
                                                  pData->FractalConfig.iMage);
+
+        if (pData->FractalConfig.iMage.data) {
+          pData->FractalTexture = LoadTextureFromImage(pData->FractalConfig.iMage);
+        }
       }
     }
   }
@@ -814,10 +816,6 @@ auto UpdateDrawFrameFractal(data* pData) -> void {
   if (pData->ShowGrid) {
     ldaShowGrid(pData);
   }
-
-  auto const PixPosStrt =
-      pData->MhE2P * es::Point(-pData->GridCfg.GridDimensions.x / 2.f, pData->GridCfg.GridDimensions.y / 2.f, 0.f);
-  DrawTexture(pData->FractalTexture, PixPosStrt.x, PixPosStrt.y, WHITE);
 
   EndDrawing();
 
@@ -1128,12 +1126,6 @@ auto main(int argc, char const* argv[]) -> int {
 
     (*Data.UpdateDrawFramePointer)(pData);
   }
-
-  // ---
-  // De-Initialization
-  // ---
-  if (Data.FractalConfig.iMage.data)
-    free(Data.FractalConfig.iMage.data);
 
   CloseWindow(); // Close window and OpenGL context
 
