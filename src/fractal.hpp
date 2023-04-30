@@ -27,6 +27,7 @@ struct pixel_canvas {
   int     NThreads{1};      //!< Number of threads to use for rendering.
   int     YIncrement{};     //!< When we have x threads, each thread will deal with a sub block of height YIncrement.
   Matrix  MhS2P{};          //!< Homogenous matrix to go from Screen to pixel, screen center is at 0,0,0.
+  bool    PrintMe{true};
 };
 
 struct config {
@@ -42,7 +43,7 @@ auto ConfigurePixelCanvas(int CenterX, int CenterY, int Width, int Height, int R
 auto GetFractalColor(double t) -> Color;
 auto Render(es::vector4_double const& RenderSize, es::vector4_double const& Constant) -> void;
 auto CreateFractalPixelSpace(currob::grid_cfg const&              GridCfgInput,
-                             pixel_canvas const&                  PixelCanvas,
+                             pixel_canvas&                        PixelCanvas,
                              int                                  screenWidth,
                              int                                  screenHeigth,
                              es::vector4_double const&            Resolution,
