@@ -296,17 +296,21 @@ auto DiagVectorAbs(Matrix const& MhE2P) -> Vector4 {
 
 }; // namespace es
 
-Matrix             operator*(Matrix const& M1, Matrix const& M2) { return es::Mul(M1, M2); }
-Matrix             operator+(Matrix const& M1, Matrix const& M2) { return es::Add(M1, M2); }
-bool               operator==(Matrix const& M1, Matrix const& M2) { return es::Eq(M1, M2); }
-bool               operator!=(Matrix const& M1, Matrix const& M2) { return !(M1 == M2); }
-Vector4            operator*(Matrix const& M, Vector4 const& V) { return es::Mul(M, V); }
-Vector4            operator*(Vector4 const& V1, float c) { return es::Mul(V1, c); }
-Vector4            operator+(Vector4 const& V1, Vector4 const& V2) { return es::Add(V1, V2); }
-es::vector4_double operator+(es::vector4_double const& V1, es::vector4_double const& V2) { return es::Add(V1, V2); }
-float              operator*(Vector4 const& V1, Vector4 const& V2) { return es::Dot(V1, V2); }
-Vector4            operator-(Vector4 const& V1, Vector4 const& V2) { return es::Sub(V1, V2); }
-bool               operator==(Vector4 const& V1, Vector4 const& V2) { return es::Eq(V1, V2); }
+Matrix              operator*(Matrix const& M1, Matrix const& M2) { return es::Mul(M1, M2); }
+Matrix              operator+(Matrix const& M1, Matrix const& M2) { return es::Add(M1, M2); }
+bool                operator==(Matrix const& M1, Matrix const& M2) { return es::Eq(M1, M2); }
+bool                operator!=(Matrix const& M1, Matrix const& M2) { return !(M1 == M2); }
+Vector4             operator*(Matrix const& M, Vector4 const& V) { return es::Mul(M, V); }
+Vector4             operator*(Vector4 const& V1, float c) { return es::Mul(V1, c); }
+Vector4             operator+(Vector4 const& V1, Vector4 const& V2) { return es::Add(V1, V2); }
+es::vector4_double  operator+(es::vector4_double const& V1, es::vector4_double const& V2) { return es::Add(V1, V2); }
+es::vector4_double& operator+=(es::vector4_double& LHS, es::vector4_double const& RHS) {
+  LHS = es::Add(LHS, RHS);
+  return LHS;
+}
+float   operator*(Vector4 const& V1, Vector4 const& V2) { return es::Dot(V1, V2); }
+Vector4 operator-(Vector4 const& V1, Vector4 const& V2) { return es::Sub(V1, V2); }
+bool    operator==(Vector4 const& V1, Vector4 const& V2) { return es::Eq(V1, V2); }
 
 /**
  */

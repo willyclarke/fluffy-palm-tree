@@ -34,9 +34,13 @@ struct pixel_canvas {
 
 struct config {
   es::vector4_double Constant{-0.4f, 0.6f, 0.f, 0.f};
+  es::vector4_double ConstantLim1{-0.4f, -0.6f, 0.f, 0.f};
+  es::vector4_double ConstantLim2{1.4f, 1.6f, 0.f, 0.f};
   es::vector4_double Dimension{2.f, 2.f, 0.f, 0.f};
   Image              iMage{};
   pixel_canvas       PixelCanvas{};
+  bool               AutoIncrement{};
+  double             AutoIncrementBy{0.01};
 };
 
 auto ConfigurePixelCanvas(int CenterX, int CenterY, int Width, int Height, int ResolutionX, int ResolutionY)
