@@ -536,7 +536,10 @@ auto HandleInput(data* pData) -> bool {
     } else if (KEY_F2 == pData->Key) {
       pData->TakeScreenshot = true;
     } else if (data::pages::PageFractal == pData->PageNum) {
-      if (KEY_F7 == pData->Key) {
+      if (KEY_F6 == pData->Key) {
+        pData->FractalConfig.AutoIncrement = !pData->FractalConfig.AutoIncrement;
+        InputChanged                       = true;
+      } else if (KEY_F7 == pData->Key) {
         pData->FractalConfig.Constant.x -= 0.01f;
         InputChanged = true;
       } else if (KEY_F8 == pData->Key) {
@@ -566,16 +569,35 @@ auto HandleInput(data* pData) -> bool {
     pData->GridCfg.GridDimensions.y = pData->GridCfg.GridDimensions.y * PixelPerUnitPrv.y / pData->vPixelsPerUnit.y;
 
     pData->GridCfg = GridCfgInPixels(pData->MhE2P, pData->GridCfg);
+  }
 
-    if (data::pages::PageFractal == pData->PageNum) {
-      fluffy::fractal::CreateFractalPixelSpace(pData->GridCfg,
-                                               pData->FractalConfig.PixelCanvas,
-                                               {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
-                                               pData->FractalConfig.Constant,
-                                               pData->FractalConfig.iMage);
-      if (pData->FractalConfig.iMage.data) {
-        pData->FractalTexture = LoadTextureFromImage(pData->FractalConfig.iMage);
+  if (data::pages::PageFractal == pData->PageNum && (InputChanged || pData->FractalConfig.AutoIncrement)) {
+
+    // ---
+    // NOTE: Create a fractal that continiously changes.
+    // ---
+    auto& FC = pData->FractalConfig;
+    if (FC.AutoIncrement) {
+
+      FC.Constant += es::VectorDouble(FC.AutoIncrementBy, 0., 0.);
+
+      if (FC.Constant.x > FC.ConstantLim2.x) {
+        FC.Constant.x = FC.ConstantLim1.x;
+        FC.Constant += es::VectorDouble(0., FC.AutoIncrementBy, 0.);
       }
+
+      if (FC.Constant.y > FC.ConstantLim2.y) {
+        FC.Constant = FC.ConstantLim1;
+      }
+    }
+
+    fluffy::fractal::CreateFractalPixelSpace(pData->GridCfg,
+                                             pData->FractalConfig.PixelCanvas,
+                                             {pData->MhE2P.m0, pData->MhE2P.m5, 0.f, 0.f},
+                                             pData->FractalConfig.Constant,
+                                             pData->FractalConfig.iMage);
+    if (pData->FractalConfig.iMage.data) {
+      pData->FractalTexture = LoadTextureFromImage(pData->FractalConfig.iMage);
     }
   }
 
