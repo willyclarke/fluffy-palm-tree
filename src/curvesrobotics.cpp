@@ -1051,6 +1051,7 @@ auto main(int argc, char const* argv[]) -> int {
   Data.vHelpTextPage.push_back("g -  toggle Grid");
   Data.vHelpTextPage.push_back("l -  open current page's web Link");
   Data.vHelpTextPage.push_back("r -  fRactal");
+  Data.vHelpTextPage.push_back("On page fRactal - F6 Auto increment Constant");
   Data.vHelpTextPage.push_back("On page fRactal - F7/F8 changes Constant Real value");
   Data.vHelpTextPage.push_back("On page fRactal - F9/F10 changes Constant Imaginary value");
 
