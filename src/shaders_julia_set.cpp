@@ -44,7 +44,7 @@ std::string GetExePath() { return GetBundlePath() + "/Contents/MacOS"; }
 
 #endif
 
-#ifdef __LINUX__
+#ifdef __linux__
 #include <limits.h>
 #include <unistd.h>
 
