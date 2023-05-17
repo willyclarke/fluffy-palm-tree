@@ -19,13 +19,30 @@ set(CURVESSRC
   ${SRC}/fractal.cpp
   )
 
+set(JULIASHADER
+  ${SRC}/shaders_julia_set.cpp
+  )
+
 add_executable("${PROJECT_NAME}fourier" ${SRC}/fourierwraylib.cpp ${SRC}/engsupport.cpp)
 
 add_executable("${PROJECT_NAME}curves" ${CURVESSRC})
 
+add_executable("${PROJECT_NAME}juliashader" ${JULIASHADER})
+
 #set(raylib_VERBOSE 1)
 target_link_libraries("${PROJECT_NAME}fourier" raylib)
 target_link_libraries("${PROJECT_NAME}curves" raylib)
+target_link_libraries("${PROJECT_NAME}juliashader" raylib)
+
+###
+# Get resources/shaders from raylib
+###
+# get_target_property(MY_RAYLIB_FOLDER raylib SOURCE_DIR)
+# foreach(dir ${MY_RAYLIB_FOLDER})
+  set(SHADER_RESOURCES_FILES ${CMAKE_SOURCE_DIR}/shaders)
+  set(SHADER_RESOURCES_FILES_DEST ${CMAKE_BINARY_DIR}/resources)
+  file(COPY ${SHADER_RESOURCES_FILES} DESTINATION ${SHADER_RESOURCES_FILES_DEST})
+# endforeach()
 
 # Web Configurations
 if (${PLATFORM} STREQUAL "Web")
@@ -38,9 +55,13 @@ if (APPLE)
   set(PROJECT_CURVES_OSX "${PROJECT_NAME}curvesosx")
   add_executable(${PROJECT_CURVES_OSX} MACOSX_BUNDLE ${CURVESSRC})
 
+  set(PROJECT_JULIA_OSX "${PROJECT_NAME}juliashaderosx")
+  add_executable(${PROJECT_JULIA_OSX} MACOSX_BUNDLE ${JULIASHADER})
+
   get_target_property(MY_RAYLIB_INCLUDES raylib INCLUDE_DIRECTORIES)
   foreach(dir ${MY_RAYLIB_INCLUDES})
     target_include_directories(${PROJECT_CURVES_OSX} PRIVATE ${dir})
+    target_include_directories(${PROJECT_JULIA_OSX} PRIVATE ${dir})
   endforeach()
 
   set_target_properties(${PROJECT_CURVES_OSX} PROPERTIES
@@ -52,16 +73,45 @@ if (APPLE)
     MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/cmake/customtemplate.plist.in
     )
 
+  set(RESOURCE_SPECIFICATION "Resources.plist")
+  message(STATUS "RESOURCE_SPECIFICATION:" ${RESOURCE_SPECIFICATION})
+  configure_file(${CMAKE_SOURCE_DIR}/cmake/customtemplate.plist.in ${CMAKE_BINARY_DIR}/Info.plist @ONLY)
+
+  set(SHADER_PLIST_FILE ${CMAKE_SOURCE_DIR}/cmake/Resources.plist)
+  set(SHADER_PLIST_FILE_DEST ${PROJECT_JULIA_OSX}.app/Contents)
+  file(COPY ${SHADER_PLIST_FILE} DESTINATION ${SHADER_PLIST_FILE_DEST})
+  file(COPY ${SHADER_PLIST_FILE} DESTINATION ${CMAKE_BINARY_DIR})
+
+  set(SHADER_RESOURCES_FILES ${CMAKE_SOURCE_DIR}/shaders)
+  set(SHADER_RESOURCES_FILES_DEST ${PROJECT_JULIA_OSX}.app/Contents/MacOS/resources)
+  file(COPY ${SHADER_RESOURCES_FILES} DESTINATION ${SHADER_RESOURCES_FILES_DEST})
+
+  set_target_properties(${PROJECT_JULIA_OSX} PROPERTIES
+    BUNDLE True
+    MACOSX_BUNDLE_GUI_IDENTIFIER my.domain.style.identifier.${PROJECT_JULIA_OSX}
+    MACOSX_BUNDLE_BUNDLE_NAME ${PROJECT_JULIA_OSX}
+    MACOSX_BUNDLE_BUNDLE_VERSION "0.1"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "0.1"
+    MACOSX_BUNDLE_INFO_PLIST Info.plist
+    )
+
     target_link_libraries("${PROJECT_NAME}fourier" "-framework IOKit")
     target_link_libraries("${PROJECT_NAME}fourier" "-framework Cocoa")
     target_link_libraries("${PROJECT_NAME}fourier" "-framework OpenGL")
     target_link_libraries("${PROJECT_NAME}curves" "-framework IOKit")
     target_link_libraries("${PROJECT_NAME}curves" "-framework Cocoa")
     target_link_libraries("${PROJECT_NAME}curves" "-framework OpenGL")
+    target_link_libraries("${PROJECT_NAME}juliashader" "-framework IOKit")
+    target_link_libraries("${PROJECT_NAME}juliashader" "-framework Cocoa")
+    target_link_libraries("${PROJECT_NAME}juliashader" "-framework OpenGL")
     target_link_libraries("${PROJECT_CURVES_OSX}" "-framework IOKit")
     target_link_libraries("${PROJECT_CURVES_OSX}" "-framework Cocoa")
     target_link_libraries("${PROJECT_CURVES_OSX}" "-framework OpenGL")
     target_link_libraries("${PROJECT_CURVES_OSX}" raylib)
+    target_link_libraries("${PROJECT_JULIA_OSX}" "-framework IOKit")
+    target_link_libraries("${PROJECT_JULIA_OSX}" "-framework Cocoa")
+    target_link_libraries("${PROJECT_JULIA_OSX}" "-framework OpenGL")
+    target_link_libraries("${PROJECT_JULIA_OSX}" raylib)
 
 endif()
 
@@ -73,8 +123,12 @@ add_subdirectory(tests)
 #############################################################
 #### Set up installer config.
 #############################################################
+set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install)
 install(TARGETS "${PROJECT_NAME}fourier" RUNTIME DESTINATION bin)
 install(TARGETS "${PROJECT_NAME}curves" RUNTIME DESTINATION bin)
+install(TARGETS "${PROJECT_NAME}juliashader" RUNTIME DESTINATION bin)
+install(DIRECTORY ${CMAKE_BINARY_DIR}/resources/ DESTINATION bin/resources)
+install(DIRECTORY ${CMAKE_BINARY_DIR}/resources/ DESTINATION bin/resources)
 set(CPACK_PACKAGE_NAME "CoolStuff")
 set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 include(CPack)

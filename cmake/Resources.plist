@@ -1,0 +1,6 @@
+<key>Resources</key>
+<array>
+<string>MacOS/resources/shaders/glsl110/julia_set.fs</string>
+<string>MacOS/resources/shaders/glsl330/julia_set.fs</string>
+</array>
+
