@@ -37,12 +37,9 @@ target_link_libraries("${PROJECT_NAME}juliashader" raylib)
 ###
 # Get resources/shaders from raylib
 ###
-# get_target_property(MY_RAYLIB_FOLDER raylib SOURCE_DIR)
-# foreach(dir ${MY_RAYLIB_FOLDER})
   set(SHADER_RESOURCES_FILES ${CMAKE_SOURCE_DIR}/shaders)
   set(SHADER_RESOURCES_FILES_DEST ${CMAKE_BINARY_DIR}/resources)
   file(COPY ${SHADER_RESOURCES_FILES} DESTINATION ${SHADER_RESOURCES_FILES_DEST})
-# endforeach()
 
 # Web Configurations
 if (${PLATFORM} STREQUAL "Web")
@@ -92,7 +89,7 @@ if (APPLE)
     MACOSX_BUNDLE_BUNDLE_NAME ${PROJECT_JULIA_OSX}
     MACOSX_BUNDLE_BUNDLE_VERSION "0.1"
     MACOSX_BUNDLE_SHORT_VERSION_STRING "0.1"
-    MACOSX_BUNDLE_INFO_PLIST Info.plist
+    MACOSX_BUNDLE_INFO_PLIST ${CMAKE_BINARY_DIR}/Info.plist
     )
 
     target_link_libraries("${PROJECT_NAME}fourier" "-framework IOKit")
