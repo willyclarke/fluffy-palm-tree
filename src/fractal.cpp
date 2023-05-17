@@ -6,7 +6,6 @@
 
 #include <cmath>
 #include <memory>
-#include <sys/_types/_size_t.h>
 
 namespace {
 /**
@@ -170,7 +169,7 @@ auto CreateFractalPixelSpace(currob::grid_cfg const&   GridCfg,
                                               GridCfg.GridCenterValue.y - GridCfg.GridDimensions.y * 0.5,
                                               0.f);
 
-  auto const ExpectedNumPixels = PixelCanvas.Dimension.x * PixelCanvas.Dimension.y;
+  auto const ExpectedNumPixels = static_cast<size_t>(PixelCanvas.Dimension.x * PixelCanvas.Dimension.y);
 
   if (outputImage.data == nullptr) {
 
@@ -199,8 +198,8 @@ auto CreateFractalPixelSpace(currob::grid_cfg const&   GridCfg,
     std::cout << "PosLowerRight:" << PosLowerRight << std::endl;
   }
 
-  auto const NumBlocksY = PixelCanvas.NThreads;
-  auto const YIncrement = double(GridCfg.GridDimensions.y / NumBlocksY);
+  auto const NumBlocksY = static_cast<size_t>(PixelCanvas.NThreads);
+  auto const YIncrement = static_cast<double>(GridCfg.GridDimensions.y / NumBlocksY);
 
   struct data_fractal_gen {
 
