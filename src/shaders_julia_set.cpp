@@ -24,6 +24,7 @@
 #include <filesystem>
 
 #include <string>
+#include <cstring>
 #include <unistd.h>
 
 #ifdef __APPLE__
@@ -46,7 +47,6 @@ std::string GetExePath() { return GetBundlePath() + "/Contents/MacOS"; }
 
 #ifdef __linux__
 #include <limits.h>
-#include <unistd.h>
 
 std::string GetExePath() {
   char    buffer[PATH_MAX];
