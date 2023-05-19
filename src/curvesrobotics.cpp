@@ -38,14 +38,14 @@ namespace {
 struct data {
 
   // Declare the function pointer
-  auto(*UpdateDrawFramePointer)(data*) -> void;
+  auto (*UpdateDrawFramePointer)(data*) -> void;
   std::vector<std::string> vHelpTextPage{};
   std::string              WikipediaLink{};
 
   int screenWidth  = 1280;
   int screenHeight = 768;
 
-  enum class pages { PageAsteroid, PageFourier, PageFractal, PageHelp };
+  enum class pages { PageAsteroid, PageFourier, PageFractal, Page3D, PageHelp };
   pages PageNum{};
 
   int   Key{};
@@ -91,6 +91,9 @@ struct data {
     bool MouseButtonUp{};
   };
   mouse_input MouseInput{};
+
+  Camera3D Camera{};
+  Vector3  CubePosition{0.0f, 0.0f, 0.0f};
 };
 /*
  * Create lines and ticks for a grid in engineering units.
@@ -426,6 +429,7 @@ auto ldaShowGrid = [](data* pData) -> void {
 auto UpdateDrawFrameFourier(data* pData) -> void;
 auto UpdateDrawFrameFractal(data* pData) -> void;
 auto UpdateDrawFrameAsteroid(data* pData) -> void;
+auto UpdateDrawFrame3D(data* pData) -> void;
 auto UpdateDrawFrameHelp(data* pData) -> void;
 
 /**
@@ -515,8 +519,12 @@ auto HandleInput(data* pData) -> bool {
       InputChanged = true;
     } else if (KEY_A == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameAsteroid;
-      InputChanged                  = true;
       pData->vPixelsPerUnit         = es::Vector(100.f, 100.f, 100.f);
+      InputChanged                  = true;
+    } else if (KEY_D == pData->Key) {
+      pData->UpdateDrawFramePointer = &UpdateDrawFrame3D;
+      pData->vPixelsPerUnit         = es::Vector(100.f, 100.f, 100.f);
+      InputChanged                  = true;
     } else if (KEY_F == pData->Key) {
       pData->UpdateDrawFramePointer = &UpdateDrawFrameFourier;
       pData->vPixelsPerUnit         = es::Vector(100.f, 100.f, 100.f);
@@ -994,6 +1002,105 @@ auto UpdateDrawFrameAsteroid(data* pData) -> void {
 }
 
 /**
+ */
+auto UpdateDrawFrame3D(data* pData) -> void {
+  if (data::pages::Page3D != pData->PageNum) {
+    pData->WikipediaLink = "";
+    pData->PageNum       = data::pages::Page3D;
+  }
+  auto& camera       = pData->Camera;
+  auto& cubePosition = pData->CubePosition;
+
+  if (IsKeyDown('X'))
+    UpdateCamera(&camera, CAMERA_FIRST_PERSON);
+
+  if (IsKeyDown(KEY_J))
+    cubePosition.y -= 0.01;
+
+  if (IsKeyDown(KEY_K))
+    cubePosition.y += 0.01;
+
+  if (IsKeyDown(KEY_H))
+    cubePosition.x += 0.01;
+
+  if (IsKeyDown(KEY_L))
+    cubePosition.x -= 0.01;
+
+  if (IsKeyDown(KEY_I))
+    cubePosition.z += 0.01;
+
+  if (IsKeyDown(KEY_N))
+    cubePosition.z -= 0.01;
+
+  if (IsKeyDown('Z'))
+    pData->Camera.target = (Vector3){0.0f, 0.0f, 0.0f};
+
+  BeginDrawing();
+  ClearBackground(WHITE);
+  BeginMode3D(camera);
+
+  // DrawCube(cubePosition, 2.0f, 2.0f, 2.0f, RED);
+  // DrawCubeWires(cubePosition, 2.0f, 2.0f, 2.0f, MAROON);
+  // auto const capsuleBeg = es::Point(1.f, 0.f, 0.f);
+  // auto const capsuleEnd = capsuleBeg + es::Vector(0.f, 10.f, 0.f);
+  // DrawCapsule(es::V4ToV3(capsuleBeg), es::V4ToV3(capsuleEnd), 1.0, 1, 5, BLUE);
+
+  auto const TriangleOffset = es::Point(cubePosition.x, cubePosition.y, cubePosition.z);
+  auto const V1             = es::V4ToV3(TriangleOffset);
+  auto const V2             = es::V4ToV3(TriangleOffset + es::Vector(0.f, 0.f, 1.f));
+  auto const V3             = es::V4ToV3(TriangleOffset + es::Vector(1.f, 0.f, 0.f));
+  DrawTriangle3D(V1, V2, V3, ORANGE);
+  Ray MyRay{};
+  MyRay.position  = Vector3{0.f, 5.f, 0.f}; // pData->Camera.target;
+  auto const D1   = (es::Point(5.f, 0.f, 5.f) - es::Point(MyRay.position));
+  auto const D2   = (es::Point(5.f, 0.f, -5.f) - es::Point(MyRay.position));
+  auto const D3   = (es::Point(-5.f, 0.f, -5.f) - es::Point(MyRay.position));
+  auto const D4   = (es::Point(-5.f, 0.f, 5.f) - es::Point(MyRay.position));
+  MyRay.direction = es::V4ToV3(es::Normalize(D1));
+  DrawRay(MyRay, GREEN);
+  MyRay.direction = es::V4ToV3(es::Normalize(D2));
+  DrawRay(MyRay, BLUE);
+  MyRay.direction = es::V4ToV3(es::Normalize(D3));
+  DrawRay(MyRay, RED);
+  MyRay.direction = es::V4ToV3(es::Normalize(D4));
+  DrawRay(MyRay, ORANGE);
+  auto const Collission = GetRayCollisionTriangle(MyRay, V1, V2, V3);
+  // DrawLine3D(pData->Camera.position, pData->Camera.target, RED);
+  // DrawLine3D(pData->Camera.target, Vector3{0.f, 10.f, 0.f}, RED);
+  // DrawLine3D(pData->Camera.target, Vector3{0.f, 10.f, 0.f}, RED);
+  // DrawCapsuleWires(es::V4ToV3(capsuleBeg), es::V4ToV3(capsuleEnd), 1.0, 1, 5, BLUE);
+
+  DrawGrid(10, 1.0f);
+
+  EndMode3D();
+
+  DrawRectangle(10, 10, 320, 153, Fade(SKYBLUE, 0.5f));
+  DrawRectangleLines(10, 10, 320, 153, BLUE);
+
+  DrawText("Free camera default controls:", 20, 20, 10, BLACK);
+  DrawText("- Mouse Wheel to Zoom in-out", 40, 40, 10, DARKGRAY);
+  DrawText("- Mouse Wheel Pressed to Pan", 40, 60, 10, DARKGRAY);
+  DrawText("- Alt + Mouse Wheel Pressed to Rotate", 40, 80, 10, DARKGRAY);
+  DrawText("- Alt + Ctrl + Mouse Wheel Pressed for Smooth Zoom", 40, 100, 10, DARKGRAY);
+  DrawText("- Z to zoom to (0, 0, 0)", 40, 120, 10, DARKGRAY);
+  DrawText(
+      TextFormat(
+          "CubePosition: %f %f %f. Collission: %i.", cubePosition.x, cubePosition.y, cubePosition.z, Collission.hit),
+      40,
+      140,
+      10,
+      DARKGRAY);
+
+  EndDrawing();
+
+  if (pData->TakeScreenshot) {
+    pData->TakeScreenshot = false;
+    auto const FileName   = std::string(__FUNCTION__) + ".png";
+    TakeScreenshot(FileName.c_str());
+  }
+}
+
+/**
  * Display a page with some help text.
  */
 auto UpdateDrawFrameHelp(data* pData) -> void {
@@ -1040,6 +1147,13 @@ auto main(int argc, char const* argv[]) -> int {
   Data.vTrendPoints.resize(size_t(Data.screenWidth * Data.screenHeight));
   auto pData = &Data;
 
+  Camera3D& Camera  = Data.Camera;
+  Camera.position   = (Vector3){10.0f, 10.0f, 10.0f}; // Camera position
+  Camera.target     = (Vector3){0.0f, 0.0f, 0.0f};    // Camera looking at point
+  Camera.up         = (Vector3){0.0f, 1.0f, 0.0f};    // Camera up vector (rotation towards target)
+  Camera.fovy       = 45.0f;                          // Camera field-of-view Y
+  Camera.projection = CAMERA_ORTHOGRAPHIC;            // Camera projection type
+
   // Initialization
   // ---
   InitWindow(Data.screenWidth, Data.screenHeight, "Fluffy's adventures with Raylib");
@@ -1047,6 +1161,7 @@ auto main(int argc, char const* argv[]) -> int {
   Data.vHelpTextPage.push_back("F1 - This help page");
   Data.vHelpTextPage.push_back("F2 - ScreenShot");
   Data.vHelpTextPage.push_back("a -  Asteriode");
+  Data.vHelpTextPage.push_back("d -  3D");
   Data.vHelpTextPage.push_back("f -  Fourier square wave");
   Data.vHelpTextPage.push_back("g -  toggle Grid");
   Data.vHelpTextPage.push_back("l -  open current page's web Link");

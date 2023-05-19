@@ -10,6 +10,7 @@
 
 #include "engsupport.hpp"
 #include "raylib.h"
+#include <cmath>
 
 #define RAYMATH_IMPLEMENTATION // Define external out-of-line implementation
 #include "raymath.h"           // Vector3, Quaternion and Matrix functionality
@@ -112,6 +113,7 @@ auto SetScaling(Vector4 const& Scale) -> Matrix {
  *             And there is no meaning in adding Points since w would not be 1.
  */
 Vector4 Point(float X, float Y, float Z) { return Vector4{X, Y, Z, 1.f}; }
+Vector4 Point(Vector3 const& V) { return Point(V.x, V.y, V.z); }
 
 /**
  * Defintions: A point in 3D space has w set to 1.
@@ -121,6 +123,12 @@ Vector4 Point(float X, float Y, float Z) { return Vector4{X, Y, Z, 1.f}; }
  *             And there is no meaning in adding Points since w would not be 1.
  */
 Vector4 Vector(float X, float Y, float Z) { return Vector4{X, Y, Z, 0.f}; }
+Vector4 Vector(Vector3 const& V) { return Vector(V.x, V.y, V.z); }
+
+Vector4 Normalize(Vector4 const& V) {
+  auto const Len = std::sqrt(V.x * V.x + V.y * V.y + V.z * V.z);
+  return Vector(V.x, V.y, V.z) * (1.f / Len);
+}
 
 vector4_double Vector4Double(double X, double Y, double Z) { return vector4_double{X, Y, Z, 0.f}; }
 
@@ -293,6 +301,8 @@ auto DiagVectorAbs(Matrix const& MhE2P) -> Vector4 {
   auto D = DiagVector(MhE2P);
   return es::Vector(std::abs(D.x), std::abs(D.y), std::abs(D.z));
 }
+
+auto V4ToV3(Vector4 const& V) -> Vector3 { return (Vector3){V.x, V.y, V.z}; }
 
 }; // namespace es
 

@@ -11,6 +11,7 @@
 #define ENGSUPPORT_HPP
 
 #include "raylib.h"
+#include "raymath.h"
 #include <iostream>
 
 /**
@@ -57,6 +58,7 @@ auto SetScaling(Vector4 const& Scale) -> Matrix;
  *             And there is no meaning in adding Points since w would not be 1.
  */
 Vector4 Point(float X, float Y, float Z);
+Vector4 Point(Vector3 const& V);
 
 /**
  * Defintions: A point in 3D space has w set to 1.
@@ -66,6 +68,8 @@ Vector4 Point(float X, float Y, float Z);
  *             And there is no meaning in adding Points since w would not be 1.
  */
 Vector4 Vector(float X, float Y, float Z);
+Vector4 Vector(Vector3 const& V);
+Vector4 Normalize(Vector4 const &V);
 
 // Vector4Double, 4 components
 struct vector4_double {
@@ -113,6 +117,7 @@ Matrix Mul(Matrix const& M1, Matrix const& M2);
 //------------------------------------------------------------------------------
 auto DiagVector(Matrix const& MhE2P) -> Vector4;
 auto DiagVectorAbs(Matrix const& MhE2P) -> Vector4;
+auto V4ToV3(Vector4 const& V) -> Vector3;
 }; // namespace es
 
 Matrix              operator*(Matrix const& M1, Matrix const& M2);
