@@ -30,12 +30,18 @@ To compile the example, use one of the following dependending on your build targ
 
 ### Desktop
 
-Use the following to build for desktop:
+Use the following to build for desktop (release / debug):
 
 ``` bash
 rm -rf build
-cmake -B build
-cmake --build build
+cmake -B build/release -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release
+```
+
+``` bash
+rm -rf build
+cmake -B build/debug -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/debug
 ```
 
 ## Know issues
@@ -45,12 +51,16 @@ Ninja build does not work with CMake's Fetchcontent. So only "Unix Makefiles" ar
 ## Dependencies
 
 * Gcc/G++
+* make
 * cmake
 * Raylib - gets pulled down with cmake's Fetchcontent.
 * On Linux some X-dev libraries are needed. CMake will complain and you need to install the missing libraries.
 
-** For Ubuntu 20.04 the following apt-packages are needed:
+** For Ubuntu 23.04 the following apt-packages are needed:
 ```bash
+sudo apt install make
+sudo apt install gcc g++
+sudo apt install libglfw3 libglfw3-dev libglfw3-doc
 sudo apt install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
 ```
 ### Cmake on Ubuntu

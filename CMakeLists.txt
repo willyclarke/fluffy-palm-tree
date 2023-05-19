@@ -4,8 +4,14 @@ project(fluffy)
 # Generate compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_BUILD_TYPE RELEASE)
+# Set the default build type to Release if not specified
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+  message(STATUS "Building in release mode")
+endif()
+
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -Wall")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -Wall -fsanitize=address -fno-omit-frame-pointer")
 set (CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(external)
@@ -32,7 +38,10 @@ add_executable("${PROJECT_NAME}juliashader" ${JULIASHADER})
 #set(raylib_VERBOSE 1)
 target_link_libraries("${PROJECT_NAME}fourier" raylib)
 target_link_libraries("${PROJECT_NAME}curves" raylib)
+target_link_libraries("${PROJECT_NAME}curves" -fsanitize=address)
 target_link_libraries("${PROJECT_NAME}juliashader" raylib)
+# Link the AddressSanitizer runtime library
+# target_link_libraries("${PROJECT_NAME}curves" PUBLIC -fsanitize=address)
 
 ###
 # Get resources/shaders from raylib
@@ -111,6 +120,15 @@ if (APPLE)
     target_link_libraries("${PROJECT_JULIA_OSX}" raylib)
 
 endif()
+
+###############################################################################
+# Specify different properties for different build types
+###############################################################################
+set_target_properties("${PROJECT_NAME}fourier" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
+set_target_properties("${PROJECT_NAME}curves" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
+set_target_properties("${PROJECT_NAME}juliashader" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
+set_target_properties("${PROJECT_CURVES_OSX}" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
+set_target_properties("${PROJECT_JULIA_OSX}" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
 
 ###############################################################################
 #### TESTS
