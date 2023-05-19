@@ -114,10 +114,12 @@ if (APPLE)
     target_link_libraries("${PROJECT_CURVES_OSX}" "-framework Cocoa")
     target_link_libraries("${PROJECT_CURVES_OSX}" "-framework OpenGL")
     target_link_libraries("${PROJECT_CURVES_OSX}" raylib)
+    set_target_properties("${PROJECT_CURVES_OSX}" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
     target_link_libraries("${PROJECT_JULIA_OSX}" "-framework IOKit")
     target_link_libraries("${PROJECT_JULIA_OSX}" "-framework Cocoa")
     target_link_libraries("${PROJECT_JULIA_OSX}" "-framework OpenGL")
     target_link_libraries("${PROJECT_JULIA_OSX}" raylib)
+    set_target_properties("${PROJECT_JULIA_OSX}" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
 
 endif()
 
@@ -127,8 +129,6 @@ endif()
 set_target_properties("${PROJECT_NAME}fourier" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
 set_target_properties("${PROJECT_NAME}curves" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
 set_target_properties("${PROJECT_NAME}juliashader" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
-set_target_properties("${PROJECT_CURVES_OSX}" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
-set_target_properties("${PROJECT_JULIA_OSX}" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
 
 ###############################################################################
 #### TESTS
