@@ -12,9 +12,10 @@ endif()
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -Wall")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -Wall -fsanitize=address -fno-omit-frame-pointer")
-set (CMAKE_CXX_STANDARD 17)
+set (CMAKE_CXX_STANDARD 20)
 
 add_subdirectory(external)
+add_subdirectory(tutorial)
 
 # Our Project
 set(SRC "src")
