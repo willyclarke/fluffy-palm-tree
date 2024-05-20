@@ -32,25 +32,9 @@ struct app_state {
   app_state() { std::cout << __PRETTY_FUNCTION__ << std::endl; }
   ~app_state() { std::cout << __PRETTY_FUNCTION__ << std::endl; }
 
-  bool TraceLevelSet{};
-
-  event_base* Base{nullptr};
-  event*      EventTimeout{nullptr};
-  event*      EventReceiveLldpFrame{nullptr};
-  event*      EventReceiveDcpFrame{nullptr};
-  event*      EventReceiveIpFrame{nullptr};
+  event_base* pEventBase{nullptr};
   event*      pSignalInterrupt{nullptr};
-
-  evutil_socket_t   SocketLLDPWrite{-1};
-  evutil_socket_t   SocketLLDPRead{-1};
-  evutil_socket_t   SocketDCP{-1};
-  evutil_socket_t   SocketIP{-1};
-  std::atomic<bool> Quit{};
-  std::atomic<bool> SocketsAllocated{};
-  std::atomic<int>  NumFsmInitialized{};
-  std::atomic<int>  NumFsmExpected{};
-
-  timeval LoopPeriod = {5, 0}; // X-second interval
+  event*      pKeyPress{nullptr};
 
   enum class return_code : int {
     OK        = 0,
@@ -58,12 +42,10 @@ struct app_state {
     ERR       = 2,
   };
 
-  std::atomic<return_code> ReturnCode{};
-
-  std::atomic<long> DCPFrameCount{};
-  std::atomic<long> IPFrameCount{};
-  std::atomic<long> LLDPFrameCount{};
-
+  timeval const                                  LoopPeriod = {0, 1000}; // X-second, Y-μsecond interval
+  bool                                           TraceLevelSet{};
+  std::atomic<bool>                              Quit{};
+  std::atomic<return_code>                       ReturnCode{};
   std::mutex                                     MutexvDeviceStateFsm{};
   std::vector<std::shared_ptr<fsm_statemachine>> vDeviceStateFsm{};
 };
