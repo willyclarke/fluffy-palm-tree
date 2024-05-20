@@ -41,7 +41,7 @@ if(NOT libevent_POPULATED)
   ExternalProject_Add(libevent_ext
     PREFIX ${libevent_BINARY_DIR}
     SOURCE_DIR ${libevent_SOURCE_DIR}
-    CONFIGURE_COMMAND ${libevent_SOURCE_DIR}/configure --prefix=${libevent_BINARY_DIR}/install
+    CONFIGURE_COMMAND ${libevent_SOURCE_DIR}/configure --prefix=${libevent_BINARY_DIR}/install --disable-openssl
     BUILD_IN_SOURCE TRUE
     BUILD_COMMAND make ${MAKE_JOBS} # instead of ${CMAKE_MAKE_PROGRAM}
     INSTALL_COMMAND make install # instead of ${CMAKE_MAKE_PROGRAM} install
