@@ -11,7 +11,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Initialize PLATFORM variable with default value "NOT_SET"
-set(PLATFORM "NOT_SET" CACHE STRING "Platform type (e.g., Web)")
+set(PLATFORM "Desktop" CACHE STRING "Platform type (e.g., Web)")
 message(STATUS "Platform: ${PLATFORM}")
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -Wall")
