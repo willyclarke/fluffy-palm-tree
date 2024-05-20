@@ -29,9 +29,18 @@ add_dependencies(${LETARGET} libevent_ext) # Ensure dependency is built before y
 target_include_directories(${LETARGET} SYSTEM PUBLIC ${LIBEVENT_INCLUDE_DIR})
 message(STATUS "${LETARGET} -> include directory set to ${LIBEVENT_INCLUDE_DIR}")
 
+if (APPLE)
+target_link_libraries(${LETARGET} PUBLIC
+        # here you can add any library dependencies
+        ${LIBEVENT_INSTALL_DIR}/lib/libevent.a
+#        rt
+        pthread
+)
+else()
 target_link_libraries(${LETARGET} PUBLIC
         # here you can add any library dependencies
         ${LIBEVENT_INSTALL_DIR}/lib/libevent.a
         rt
         pthread
 )
+endif()

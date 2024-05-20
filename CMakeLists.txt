@@ -10,6 +10,10 @@ if(NOT CMAKE_BUILD_TYPE)
   message(STATUS "Building in release mode")
 endif()
 
+# Initialize PLATFORM variable with default value "NOT_SET"
+set(PLATFORM "NOT_SET" CACHE STRING "Platform type (e.g., Web)")
+message(STATUS "Platform: ${PLATFORM}")
+
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -Wall")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -Wall -fsanitize=address -fno-omit-frame-pointer")
 set (CMAKE_CXX_STANDARD 20)
