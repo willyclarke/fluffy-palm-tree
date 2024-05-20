@@ -34,17 +34,21 @@ Use the following to build for desktop (release / debug):
 
 ``` bash
 rm -rf build
-cmake -B build/release -DCMAKE_BUILD_TYPE=Release
+cmake -B build/release -DCMAKE_BUILD_TYPE=Release -GNinja
 cmake --build build/release
 ```
 
 ``` bash
 rm -rf build
-cmake -B build/debug -DCMAKE_BUILD_TYPE=Debug
+cmake -B build/debug -DCMAKE_BUILD_TYPE=Debug -GNinja
 cmake --build build/debug
 ```
 
 ## Know issues
+
+Project fails to build on OSX when more recent version of Raylib is installed with Homebrew.
+
+## Fixed issues
 
 Ninja build does not work with CMake's Fetchcontent. So only "Unix Makefiles" are supported.
 
