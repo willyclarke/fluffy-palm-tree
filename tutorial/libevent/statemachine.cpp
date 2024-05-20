@@ -14,9 +14,13 @@
 /**
  *
  */
-fsm_statemachine::fsm_statemachine(app::app_state* pAS) : pAppState(pAS) {
+fsm_statemachine::fsm_statemachine(app::app_state* pAS, char const* pID) : pAppState(pAS) {
 
-  std::cout << __PRETTY_FUNCTION__ << std::endl;
+  if (pID)
+    ID = std::string(pID);
+
+  std::cout << __PRETTY_FUNCTION__ << ". Object no. " << this << ". ID: " << ID << std::endl;
+
   pEventBase = event_base_new();
   if (!pEventBase)
     return;
@@ -25,9 +29,16 @@ fsm_statemachine::fsm_statemachine(app::app_state* pAS) : pAppState(pAS) {
   pEventGotoStateA    = event_new(pEventBase, -1, 0, StateA, (void*)this);
   pEventGotoStateB    = event_new(pEventBase, -1, 0, StateB, (void*)this);
   pEventGotoStateC    = event_new(pEventBase, -1, 0, StateC, (void*)this);
+  pEventKeepAlive     = event_new(pEventBase, -1, 0, StateKeepAlive, (void*)this);
+
+  event_add(pEventGotoStateInit, NULL);
+  event_add(pEventGotoStateA, NULL);
+  event_add(pEventGotoStateB, NULL);
+  event_add(pEventGotoStateC, NULL);
+  event_add(pEventKeepAlive, NULL);
 
   /* Move to StateInit immediately. */
-  event_add(pEventGotoStateInit, NULL);
+  event_active(pEventKeepAlive, 0, 0);
   event_active(pEventGotoStateInit, 0, 0);
 
   std::cout << __PRETTY_FUNCTION__ << ". EXIT CTOR" << std::endl;
@@ -37,6 +48,7 @@ fsm_statemachine::fsm_statemachine(app::app_state* pAS) : pAppState(pAS) {
  *
  */
 fsm_statemachine::~fsm_statemachine() {
+  std::cout << this << " :: " << __PRETTY_FUNCTION__ << ". ID: " << ID << std::endl;
 
   if (!pEventBase) {
     std::cout << __PRETTY_FUNCTION__ << ". EXIT DTOR Abnormally." << std::endl;
@@ -47,7 +59,7 @@ fsm_statemachine::~fsm_statemachine() {
     event_del(pEventGotoStateInit);
     event_free(pEventGotoStateInit);
   }
-  std::cout << __PRETTY_FUNCTION__ << ". Line:" << __LINE__ << std::endl;
+
   if (pEventGotoStateA) {
     event_del(pEventGotoStateA);
     event_free(pEventGotoStateA);
@@ -59,6 +71,11 @@ fsm_statemachine::~fsm_statemachine() {
   if (pEventGotoStateC) {
     event_del(pEventGotoStateC);
     event_free(pEventGotoStateC);
+  }
+
+  if (pEventKeepAlive) {
+    event_del(pEventKeepAlive);
+    event_free(pEventKeepAlive);
   }
 
   Stop();
@@ -74,8 +91,7 @@ fsm_statemachine::~fsm_statemachine() {
  *
  */
 void fsm_statemachine::Run() {
-
-  std::cout << __PRETTY_FUNCTION__ << ". ENTER." << std::endl;
+  std::cout << this << " :: " << __PRETTY_FUNCTION__ << ". ID: " << ID << std::endl;
 
   if (!pEventBase)
     return;
@@ -83,7 +99,7 @@ void fsm_statemachine::Run() {
   /* Start event handling */
   event_base_dispatch(pEventBase);
 
-  std::cout << __PRETTY_FUNCTION__ << ". EXIT." << std::endl;
+  std::cout << this << " :: " << __PRETTY_FUNCTION__ << ". ID: " << ID << ". EXIT." << std::endl;
 }
 
 /**
@@ -91,87 +107,98 @@ void fsm_statemachine::Run() {
  */
 void fsm_statemachine::Stop() {
 
-  std::cout << __PRETTY_FUNCTION__ << ". Line:" << __LINE__ << std::endl;
-
   if (pEventBase) {
-    event_base_loopbreak(pEventBase);
-    timeval const ExitWaitTime = {1, 1000 * 500}; // X-second, μ-second interval
+    std::cout << this << " :: " << __PRETTY_FUNCTION__ << ". ID: " << ID << std::endl;
+
+    event_del(pEventGotoStateInit);
+    event_del(pEventGotoStateA);
+    event_del(pEventGotoStateB);
+    event_del(pEventGotoStateC);
+    event_del(pEventKeepAlive);
+
+    timeval const ExitWaitTime = {0, 500}; // X-second, μ-second interval
     event_base_loopexit(pEventBase, &ExitWaitTime);
+    event_base_loopbreak(pEventBase);
   }
 
-  std::cout << __PRETTY_FUNCTION__ << ". EXIT." << std::endl;
+  std::cout << this << " :: " << __PRETTY_FUNCTION__ << ". ID: " << ID << ". EXIT." << std::endl;
+}
+
+/**
+ */
+void fsm_statemachine::Trig(char C) {
+  switch (C) {
+  case 'a':
+  case 'A': {
+    event_active(pEventGotoStateA, 0, 0);
+  } break;
+  case 'b':
+  case 'B': {
+    event_active(pEventGotoStateB, 0, 0);
+  } break;
+  case 'c':
+  case 'C': {
+    event_active(pEventGotoStateC, 0, 0);
+  } break;
+  case 'i':
+  case 'I': {
+    event_active(pEventGotoStateInit, 0, 0);
+  } break;
+  default:
+    break;
+  }
+}
+
+/**
+ *
+ */
+void fsm_statemachine::StateKeepAlive(evutil_socket_t Sockfd, short Event, void* pArg) {
+  auto pFsm = (fsm_statemachine*)pArg;
+
+  auto pAppState = pFsm->pAppState;
+  if (!pAppState)
+    return;
+
+  if (pFsm->pAppState->Quit) {
+    std::cout << pArg << " :: " << __PRETTY_FUNCTION__ << ". ID: " << pFsm->ID << " -> Quit detected. " << std::endl;
+    return;
+  }
+
+  /* Schedule update to run after ... */
+  event_add(pFsm->pEventKeepAlive, &pAppState->LoopPeriod);
 }
 
 /**
  *
  */
 void fsm_statemachine::StateInit(evutil_socket_t Sockfd, short Event, void* pArg) {
-
-  auto pDeviceStateFsm = (fsm_statemachine*)pArg;
-
-  std::cout << __PRETTY_FUNCTION__ << std::endl;
-
-  /* Add myself as a pending event so that I can be called. */
-  event_add(pDeviceStateFsm->pEventGotoStateInit, NULL);
-
-  // if (pDeviceStateFsm->pAppState->Quit)
-  //   return;
-
-  /* Go to the next state. */
-  event_active(pDeviceStateFsm->pEventGotoStateA, 0, 0);
+  auto pFsm = (fsm_statemachine*)pArg;
+  std::cout << pArg << " :: " << __PRETTY_FUNCTION__ << ". ID: " << pFsm->ID << std::endl;
 }
 
 /**
  *
  */
 void fsm_statemachine::StateA(evutil_socket_t Sockfd, short Event, void* pArg) {
-  std::cout << __PRETTY_FUNCTION__ << std::endl;
-
-  auto pDeviceStateFsm = (fsm_statemachine*)pArg;
-
-  /* Add myself as a pending event so that I can be called. */
-  event_add(pDeviceStateFsm->pEventGotoStateA, NULL);
-
-  // if (pDeviceStateFsm->pAppState->Quit)
-  //   return;
-
-  /* Go to the next state. */
-  event_active(pDeviceStateFsm->pEventGotoStateB, 0, 0);
+  auto pFsm = (fsm_statemachine*)pArg;
+  std::cout << pArg << " :: " << __PRETTY_FUNCTION__ << ". ID: " << pFsm->ID << std::endl;
 }
 
 /**
  *
  */
 void fsm_statemachine::StateB(evutil_socket_t Sockfd, short Event, void* pArg) {
-  std::cout << __PRETTY_FUNCTION__ << std::endl;
-
-  auto pDeviceStateFsm = (fsm_statemachine*)pArg;
-
-  /* Add myself as a pending event so that I can be called. */
-  event_add(pDeviceStateFsm->pEventGotoStateB, NULL);
-
-  // if (pDeviceStateFsm->pAppState->Quit)
-  //   return;
-
-  /* Go to the next state. */
-  event_active(pDeviceStateFsm->pEventGotoStateC, 0, 0);
+  auto pFsm = (fsm_statemachine*)pArg;
+  std::cout << pArg << " :: " << __PRETTY_FUNCTION__ << ". ID: " << pFsm->ID << std::endl;
 }
 
 /**
  *
  */
 void fsm_statemachine::StateC(evutil_socket_t Sockfd, short Event, void* pArg) {
-  std::cout << __PRETTY_FUNCTION__ << std::endl;
-  auto pDeviceStateFsm = (fsm_statemachine*)pArg;
+  auto pFsm = (fsm_statemachine*)pArg;
+  std::cout << pArg << " :: " << __PRETTY_FUNCTION__ << ". ID: " << pFsm->ID << std::endl;
 
-  if (pDeviceStateFsm->pAppState->Quit)
-    std::cout << __PRETTY_FUNCTION__ << " -> Quit detected. " << std::endl;
-
-  //   return;
-
-  /* Add myself as a pending event so that I can be called. */
-  event_add(pDeviceStateFsm->pEventGotoStateC, NULL);
-
-  /* Go to the next state. */
-  event_active(pDeviceStateFsm->pEventGotoStateInit, 0, 0);
+  if (pFsm->pAppState->Quit)
+    std::cout << pArg << " :: " << __PRETTY_FUNCTION__ << ". ID: " << pFsm->ID << " -> Quit detected. " << std::endl;
 }
