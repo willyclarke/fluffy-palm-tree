@@ -83,3 +83,11 @@ FetchContent_Declare(
 
 # This will try calling find_package() first for both dependencies
 FetchContent_MakeAvailable(Catch2)
+
+####################################################################################################
+# Simple Fast Multimedia Library
+####################################################################################################
+FetchContent_Declare(SFML
+    GIT_REPOSITORY https://github.com/SFML/SFML.git
+    GIT_TAG 2.6.x)
+FetchContent_MakeAvailable(SFML)
