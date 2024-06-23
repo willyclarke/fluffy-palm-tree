@@ -135,7 +135,10 @@ set_target_properties("${PROJECT_NAME}fourier" PROPERTIES DEBUG_POSTFIX "_debug"
 set_target_properties("${PROJECT_NAME}curves" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
 set_target_properties("${PROJECT_NAME}juliashader" PROPERTIES DEBUG_POSTFIX "_debug" RELEASE_POSTFIX "")
 
-add_subdirectory(sfmlprojects/physicallybasedrendering/apps)
+###############################################################################
+#### SFML Projects
+###############################################################################
+add_subdirectory(sfmlprojects)
 
 ###############################################################################
 #### TESTS
