@@ -83,13 +83,12 @@ private:
 
 int main(int argc, char const* argv[]) {
 
-  std::string const AppName(argv[0]);
-  auto              ExePath = std::filesystem::current_path();
-  sf::Font          Font;
-  std::string const FontFile = ExePath.string() + "/fonts/miracode/Miracode.ttf";
+  auto PathToFont = std::filesystem::path(argv[argc - argc]).remove_filename();
+  PathToFont /= "../fonts/miracode/Miracode.ttf";
 
-  if (!Font.loadFromFile(FontFile)) {
-    std::cerr << "Could not load font from file " << FontFile << std::endl;
+  sf::Font Font{};
+  if (!Font.loadFromFile(PathToFont.string())) {
+    std::cerr << "Could not load font from file " << PathToFont.string() << std::endl;
     std::cerr << "Fonts are expected to be found in ../fonts as seen from the apps location." << std::endl;
   }
 
