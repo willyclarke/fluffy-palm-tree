@@ -18,6 +18,7 @@ add_custom_target(copy_fonts ALL
     COMMENT "Copying ${FONT_FILE} to ${FONT_DEST_DIR}"
 )
 
+add_subdirectory(lib)
 add_subdirectory(physicallybasedrendering/apps)
 add_subdirectory(natureofcode/apps)
 
