@@ -1,0 +1,12 @@
+# cmake/MyLibraryConfig.cmake.in
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Add any dependencies here
+# find_dependency(SomeOtherLibrary)
+
+include("${CMAKE_CURRENT_LIST_DIR}/MyLibraryTargets.cmake")
+
+check_required_components(MyLibrary)
